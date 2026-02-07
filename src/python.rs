@@ -84,8 +84,10 @@ fn voice_to_params<'py>(
 ) -> PyResult<Vec<PyObject>> {
     let samples = audio.as_slice()?;
 
-    let params = crate::layers::parametric::voice_to_params(samples, sample_rate)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    let samples_owned: Vec<f32> = samples.to_vec();
+    let params = py.allow_threads(|| {
+        crate::layers::parametric::voice_to_params(&samples_owned, sample_rate)
+    }).map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
     // Convert to Python dicts
     let result: Vec<PyObject> = params
@@ -181,7 +183,9 @@ fn params_to_voice<'py>(
         })
         .collect::<PyResult<Vec<_>>>()?;
 
-    let samples = crate::layers::parametric::params_to_voice(&parametric_params, sample_rate);
+    let samples = py.allow_threads(|| {
+        crate::layers::parametric::params_to_voice(&parametric_params, sample_rate)
+    });
     Ok(samples.into_pyarray(py))
 }
 
@@ -203,8 +207,10 @@ fn semantic_encode<'py>(
 ) -> PyResult<PyObject> {
     let samples = audio.as_slice()?;
 
-    let params = crate::layers::semantic::semantic_encode(samples, sample_rate)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    let samples_owned: Vec<f32> = samples.to_vec();
+    let params = py.allow_threads(|| {
+        crate::layers::semantic::semantic_encode(&samples_owned, sample_rate)
+    }).map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
     let dict = pyo3::types::PyDict::new(py);
     dict.set_item("text", &params.text)?;
@@ -299,8 +305,9 @@ fn semantic_decode<'py>(
         duration_ms,
     };
 
-    let samples = crate::layers::semantic::semantic_decode(&semantic_params, sample_rate)
-        .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    let samples = py.allow_threads(|| {
+        crate::layers::semantic::semantic_decode(&semantic_params, sample_rate)
+    }).map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
     Ok(samples.into_pyarray(py))
 }
