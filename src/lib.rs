@@ -46,6 +46,9 @@ pub mod simd;
 #[cfg(feature = "python")]
 pub mod python;
 
+#[cfg(feature = "ml")]
+pub mod ml_bridge;
+
 // Re-export main types
 pub use types::*;
 pub use api::*;

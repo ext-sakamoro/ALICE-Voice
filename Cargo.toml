@@ -17,6 +17,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["std", "python"]
 std = []
 python = ["pyo3", "numpy"]
+ml = ["dep:alice-ml"]   # ALICE-ML ternary inference for voice parameters
 no_std = []
 
 [dependencies]
@@ -33,6 +34,9 @@ rayon = "1.10"
 # Python bindings (optional)
 pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
 numpy = { version = "0.22", optional = true }
+
+# ML inference (optional)
+alice-ml = { path = "../ALICE-ML", optional = true, default-features = false, features = ["std"] }
 
 [dev-dependencies]
 criterion = "0.5"
