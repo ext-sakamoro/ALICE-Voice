@@ -263,6 +263,44 @@ panic = "abort"       # No unwinding overhead
 
 ARM NEON is automatically enabled on aarch64 targets via `.cargo/config.toml`.
 
+## ASP Integration (ALICE-Streaming-Protocol)
+
+ALICE-Voice is integrated into [ALICE-Streaming-Protocol](https://github.com/ext-sakamoro/ALICE-Streaming-Protocol) as the voice encoding backend via the `voice` feature flag.
+
+```toml
+# In ALICE-Streaming-Protocol's Cargo.toml
+libasp = { version = "1.0", features = ["voice"] }
+```
+
+### How ASP Uses ALICE-Voice
+
+ASP wraps ALICE-Voice's codec API for voice frame encoding within the ASP transport layer:
+
+```
+ASP Voice Encode:
+  PCM f32 → VoiceCodec::encode_parametric (L2, 100-600x)
+           or VoiceCodec::encode_spectral  (L1, 10-50x)
+           → Serialize to AudioFrame bytes
+           → ASP packet framing
+
+ASP Voice Decode:
+  ASP packet → Deserialize AudioFrame
+             → VoiceCodec::decode_parametric / decode_spectral
+             → PCM f32
+```
+
+- **Batch API**: `encode_batch()` for processing multiple voice frames efficiently
+- **Pre-allocated serialization**: `Vec::with_capacity` for all serialize/deserialize paths
+- **Python bindings**: `libasp.encode_voice()` / `libasp.decode_voice()` with GIL release + NumPy zero-copy
+
+### Standalone vs ASP Usage
+
+| Use Case | Recommended |
+|----------|-------------|
+| Direct voice processing / embedded | ALICE-Voice standalone |
+| Voice within ASP video stream | ASP `media-stack` feature |
+| Voice anonymization / transformation | ALICE-Voice standalone (parameter manipulation) |
+
 ## Related Projects
 
 | Project | Description |
