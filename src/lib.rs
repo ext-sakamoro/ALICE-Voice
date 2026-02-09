@@ -49,6 +49,9 @@ pub mod python;
 #[cfg(feature = "ml")]
 pub mod ml_bridge;
 
+#[cfg(feature = "codec")]
+pub mod codec_bridge;
+
 // Re-export main types
 pub use types::*;
 pub use api::*;
