@@ -231,6 +231,8 @@ alice-voice = { version = "0.1", default-features = false, features = ["std"] }
 | `std` | Standard library (default) |
 | `python` | Python bindings via PyO3 |
 | `no_std` | Embedded systems support |
+| `ml` | ALICE-ML bridge (ternary NN voice prediction) |
+| `db` | ALICE-DB bridge (voice metrics persistence) |
 
 ### Python
 
@@ -300,6 +302,50 @@ ASP Voice Decode:
 | Direct voice processing / embedded | ALICE-Voice standalone |
 | Voice within ASP video stream | ASP `media-stack` feature |
 | Voice anonymization / transformation | ALICE-Voice standalone (parameter manipulation) |
+
+## Cross-Crate Bridges
+
+ALICE-Voice connects to other ALICE ecosystem crates via feature-gated bridge modules:
+
+| Bridge | Feature | Target Crate | Description |
+|--------|---------|--------------|-------------|
+| `ml_bridge` | `ml` | [ALICE-ML](../ALICE-ML) | Ternary NN prediction for LPC coefficients and pitch parameters |
+| `db_bridge` | `db` | [ALICE-DB](../ALICE-DB) | Voice metrics persistence (pitch/gain/voicing → time-series) |
+
+### ML Bridge (feature: `ml`)
+
+Uses ALICE-ML's ternary matrix-vector operations to predict LPC coefficients and pitch parameters from input feature vectors, enabling neural-enhanced voice coding.
+
+```rust
+use alice_voice::ml_bridge::VoicePredictor;
+
+let predictor = VoicePredictor::new(input_dim, lpc_order);
+
+// Predict LPC coefficients from feature vector
+let lpc = predictor.predict_lpc(&features);
+
+// Predict pitch parameters
+let pitch = predictor.predict_pitch(&features);
+```
+
+### DB Bridge (feature: `db`)
+
+Persists per-frame voice metrics (pitch F0, gain, voicing probability) into ALICE-DB time-series storage for analysis, monitoring, or offline tuning.
+
+```rust
+use alice_voice::db_bridge::VoiceMetricsSink;
+
+let sink = VoiceMetricsSink::open("/tmp/voice_metrics")?;
+
+// Record from ParametricParams
+sink.record_frame(timestamp_ms, &params)?;
+
+// Or record individual metrics
+sink.record(timestamp_ms, pitch_f0, gain, voicing_prob)?;
+
+// Query pitch history
+let pitch_history = sink.query_pitch(start_ms, end_ms)?;
+```
 
 ## Related Projects
 
