@@ -19,6 +19,7 @@ std = []
 python = ["pyo3", "numpy"]
 ml = ["dep:alice-ml"]   # ALICE-ML ternary inference for voice parameters
 codec = ["dep:alice-codec"]  # ALICE-Codec wavelet + rANS for parameter compression
+db = ["dep:alice-db"]   # ALICE-DB voice metrics persistence
 no_std = []
 
 [dependencies]
@@ -41,6 +42,9 @@ alice-ml = { path = "../ALICE-ML", optional = true, default-features = false, fe
 
 # Codec bridge (optional)
 alice-codec = { path = "../ALICE-Codec", optional = true, default-features = false, features = ["std"] }
+
+# DB bridge (optional)
+alice-db = { path = "../ALICE-DB", optional = true, default-features = false }
 
 [dev-dependencies]
 criterion = "0.5"
