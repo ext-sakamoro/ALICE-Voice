@@ -347,6 +347,16 @@ sink.record(timestamp_ms, pitch_f0, gain, voicing_prob)?;
 let pitch_history = sink.query_pitch(start_ms, end_ms)?;
 ```
 
+### ALICE-Text Bridge (feature: `text`)
+
+Compressed voice transcript metadata via ALICE-Text exception-based compression.
+
+- `VoiceTextMetadata` — Transcript hint, pitch, energy, duration
+- `extract_voice_metadata()` — Extract features from PCM audio frames
+- `compress_voice_transcript()` / `decompress_voice_transcript()` — Compress/decompress metadata
+
+Enable: `alice-voice = { features = ["text"] }`
+
 ## Related Projects
 
 | Project | Description |
