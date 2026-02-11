@@ -55,6 +55,9 @@ pub mod codec_bridge;
 #[cfg(feature = "db")]
 pub mod db_bridge;
 
+#[cfg(feature = "text")]
+pub mod text_bridge;
+
 // Re-export main types
 pub use types::*;
 pub use api::*;
