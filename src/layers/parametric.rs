@@ -161,7 +161,7 @@ impl<'a> ParametricParamsView<'a> {
     }
 
     /// Estimate encoded size in bytes
-    #[inline]
+    #[inline(always)]
     pub fn encoded_size(&self) -> usize {
         4 + self.lpc_coeffs.len() * 4 + 4 + 8 + self.formant_count * 8 + 8
     }
@@ -250,7 +250,7 @@ impl ParametricLayer {
     }
 
     /// Get LPC order
-    #[inline]
+    #[inline(always)]
     pub fn lpc_order(&self) -> usize {
         self.lpc_order
     }
@@ -425,6 +425,9 @@ impl ParametricLayer {
         let mut output = vec![0.0; total_len];
 
         // Simple overlap-add with triangular window
+        // Precompute reciprocal of half-frame to eliminate per-sample division
+        let half_frame = self.frame_size / 2;
+        let inv_half_frame = (half_frame as f32).recip();
         for (i, params) in params_list.iter().enumerate() {
             let frame = self.synthesize(params);
             let start = i * hop_size;
@@ -432,10 +435,10 @@ impl ParametricLayer {
             // Triangular window for overlap-add
             for (j, &sample) in frame.iter().enumerate() {
                 if start + j < total_len {
-                    let weight = if j < self.frame_size / 2 {
-                        j as f32 / (self.frame_size / 2) as f32
+                    let weight = if j < half_frame {
+                        j as f32 * inv_half_frame
                     } else {
-                        1.0 - (j - self.frame_size / 2) as f32 / (self.frame_size / 2) as f32
+                        1.0 - (j - half_frame) as f32 * inv_half_frame
                     };
                     output[start + j] += sample * weight;
                 }

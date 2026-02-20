@@ -63,13 +63,13 @@ impl SpectralParams {
     }
 
     /// Get number of non-zero coefficients
-    #[inline]
+    #[inline(always)]
     pub fn sparsity(&self) -> usize {
         self.coefficients.len()
     }
 
     /// Estimate encoded size in bytes
-    #[inline]
+    #[inline(always)]
     pub fn encoded_size(&self) -> usize {
         // 2 bytes index + 4 bytes value per coefficient
         4 + self.coefficients.len() * 6
@@ -246,7 +246,7 @@ impl SpectralLayer {
     ///
     /// Computes: ws_output = dct_matrix × ws_input
     /// Uses 4x loop unrolling for SIMD auto-vectorization.
-    #[inline]
+    #[inline(always)]
     fn dct_inplace(&mut self) {
         let n = self.frame_size;
         let matrix = &self.dct_matrix;
@@ -282,7 +282,7 @@ impl SpectralLayer {
     /// Fast IDCT using pre-computed matrix (SGEMV)
     ///
     /// Computes: ws_output = idct_matrix × ws_input
-    #[inline]
+    #[inline(always)]
     fn idct_inplace(&mut self) {
         let n = self.frame_size;
         let matrix = &self.idct_matrix;
@@ -317,19 +317,21 @@ impl SpectralLayer {
     /// Quantize coefficients inplace
     ///
     /// ws_quantized[i] = round(ws_output[i] / quant_matrix[i])
-    #[inline]
+    /// Uses reciprocal multiplication to eliminate repeated float division.
+    #[inline(always)]
     fn quantize_inplace(&mut self) {
         let n = self.frame_size;
 
         for i in 0..n {
-            self.ws_quantized[i] = (self.ws_output[i] / self.quant_matrix[i]).round() as i32;
+            let inv_q = self.quant_matrix[i].recip();
+            self.ws_quantized[i] = (self.ws_output[i] * inv_q).round() as i32;
         }
     }
 
     /// Dequantize coefficients inplace
     ///
     /// ws_input[i] = ws_quantized[i] * quant_matrix[i]
-    #[inline]
+    #[inline(always)]
     fn dequantize_inplace(&mut self) {
         let n = self.frame_size;
 
@@ -362,7 +364,8 @@ impl SpectralLayer {
             self.ws_input[i] = windowed;
             energy = windowed.mul_add(windowed, energy);
         }
-        energy /= n as f32;
+        let inv_n = (n as f32).recip();
+        energy *= inv_n;
 
         // 2. DCT (ws_input → ws_output)
         self.dct_inplace();
@@ -423,7 +426,7 @@ impl SpectralLayer {
     ///
     /// # Returns
     /// Number of samples written
-    #[inline]
+    #[inline(always)]
     pub fn synthesize_into(&mut self, params: &SpectralParams, output: &mut [f32]) -> usize {
         let n = params.frame_size.min(self.frame_size).min(output.len());
 
@@ -491,10 +494,10 @@ impl SpectralLayer {
             }
         }
 
-        // Normalize by window overlap
+        // Normalize by window overlap using reciprocal multiplication
         for i in 0..total_len {
             if normalization[i] > 1e-10 {
-                output[i] /= normalization[i];
+                output[i] *= normalization[i].recip();
             }
         }
 

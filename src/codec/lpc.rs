@@ -526,7 +526,7 @@ pub mod lpc_fixed {
     /// Compute autocorrelation in fixed-point
     ///
     /// Uses SIMD-friendly patterns for ARM NEON auto-vectorization.
-    #[inline]
+    #[inline(always)]
     pub fn autocorrelation_fixed(samples: &[i32], order: usize) -> Vec<i64> {
         let n = samples.len();
         let mut r = vec![0i64; order + 1];
@@ -576,7 +576,7 @@ pub mod lpc_fixed {
     /// Fast integer square root (Newton-Raphson)
     ///
     /// For embedded systems without FPU.
-    #[inline]
+    #[inline(always)]
     pub fn fast_isqrt(n: i64) -> i32 {
         if n <= 0 {
             return 0;
@@ -668,7 +668,7 @@ pub mod lpc_fixed {
     }
 
     /// Zero-allocation synthesize into pre-allocated buffer
-    #[inline]
+    #[inline(always)]
     pub fn synthesize_fixed_into(
         coeffs: &LpcCoefficientsFixed,
         excitation: &[i32],
