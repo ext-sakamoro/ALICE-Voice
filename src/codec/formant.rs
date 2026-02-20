@@ -489,7 +489,7 @@ impl FormantExtractor {
             }
         }
 
-        formants.sort_by(|a, b| a.frequency.partial_cmp(&b.frequency).unwrap());
+        formants.sort_by(|a, b| a.frequency.partial_cmp(&b.frequency).unwrap_or(std::cmp::Ordering::Equal));
 
         Ok(FormantResult {
             formants,
