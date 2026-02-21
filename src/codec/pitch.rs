@@ -313,7 +313,7 @@ impl PitchDetector {
             if self.ws_yin_d_prime[tau] < threshold {
                 // Find local minimum
                 best_tau = tau;
-                while best_tau + 1 <= max_period
+                while best_tau < max_period
                     && self.ws_yin_d_prime[best_tau + 1] < self.ws_yin_d_prime[best_tau]
                 {
                     best_tau += 1;
@@ -454,7 +454,7 @@ impl PitchDetector {
 
         // High ZCR suggests unvoiced speech or noise
         let confidence = if is_voiced {
-            (1.0 - zcr * 5.0).max(0.0).min(1.0)
+            (1.0 - zcr * 5.0).clamp(0.0, 1.0)
         } else {
             0.0
         };

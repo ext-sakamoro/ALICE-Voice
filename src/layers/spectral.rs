@@ -1,3 +1,5 @@
+// DSP loops access multiple arrays at the same index — standard signal processing pattern.
+#![allow(clippy::needless_range_loop)]
 //! L1: Spectral Layer
 //!
 //! Direct frequency-domain representation using FFT/DCT coefficients.

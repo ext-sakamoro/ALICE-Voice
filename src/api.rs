@@ -201,9 +201,11 @@ impl EncodingStats {
             return Self::default();
         }
 
-        let mut stats = Self::default();
-        stats.frames_processed = params.len();
-        stats.samples_processed = original_samples;
+        let mut stats = Self {
+            frames_processed: params.len(),
+            samples_processed: original_samples,
+            ..Self::default()
+        };
 
         let mut pitch_sum = 0.0f32;
         let mut pitch_count = 0;

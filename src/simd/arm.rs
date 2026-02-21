@@ -28,6 +28,9 @@ pub fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
 }
 
 /// Q16.16 multiply 4 values in parallel (NEON)
+///
+/// # Safety
+/// Caller must ensure `target_feature = "neon"` is available on the current CPU.
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
 pub unsafe fn q16_mul_4x_neon(a: &[i32; 4], b: &[i32; 4]) -> [i32; 4] {
@@ -42,8 +45,8 @@ pub unsafe fn q16_mul_4x_neon(a: &[i32; 4], b: &[i32; 4]) -> [i32; 4] {
     let prod_lo = vmull_s32(a_lo, b_lo);
     let prod_hi = vmull_s32(a_hi, b_hi);
 
-    let result_lo = vshrn_n_s64(prod_lo, Q16_SHIFT as i32);
-    let result_hi = vshrn_n_s64(prod_hi, Q16_SHIFT as i32);
+    let result_lo = vshrn_n_s64(prod_lo, Q16_SHIFT);
+    let result_hi = vshrn_n_s64(prod_hi, Q16_SHIFT);
 
     let result = vcombine_s32(result_lo, result_hi);
 

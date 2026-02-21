@@ -1,3 +1,5 @@
+// DSP loops access multiple arrays at the same index — standard signal processing pattern.
+#![allow(clippy::needless_range_loop)]
 //! Formant Extraction - Ultra Optimized ("Crispy" Edition)
 //!
 //! Tunings:
@@ -122,15 +124,15 @@ fn fast_atan2(y: f32, x: f32) -> f32 {
     // Polynomial approximation for atan(a) where 0 <= a <= 1
     // atan(a) ≈ a - a^3/3 + a^5/5 - ... (optimized polynomial)
     let s = a * a;
-    let r = ((-0.0464964749 * s + 0.15931422) * s - 0.327622764) * s * a + a;
+    let r = ((-0.046_496_473 * s + 0.15931422) * s - 0.327_622_77) * s * a + a;
 
     // Map back to full circle
-    let r = if abs_y > abs_x { 1.57079637 - r } else { r };
+    let r = if abs_y > abs_x { 1.570_796_4 - r } else { r };
 
     // Quadrant correction
     match (x < 0.0, y < 0.0) {
-        (true, true) => -3.14159274 + r,
-        (true, false) => 3.14159274 - r,
+        (true, true) => -core::f32::consts::PI + r,
+        (true, false) => core::f32::consts::PI - r,
         (false, true) => -r,
         (false, false) => r,
     }
@@ -252,7 +254,7 @@ impl FormantExtractor {
 
             // Stability check using fast magnitude
             let mag = fast_magnitude(re, im);
-            if mag < 0.7 || mag >= 1.0 {
+            if !(0.7..1.0).contains(&mag) {
                 continue;
             }
 
@@ -467,7 +469,7 @@ impl FormantExtractor {
             }
 
             let mag = fast_magnitude(re[i], im[i]);
-            if mag < 0.7 || mag >= 1.0 {
+            if !(0.7..1.0).contains(&mag) {
                 continue;
             }
 
@@ -539,9 +541,8 @@ impl FormantExtractor {
             }
         }
 
-        for i in 0..order.min(poly.len() - 1) {
-            coeffs[i] = poly[i + 1];
-        }
+        let n = order.min(poly.len() - 1);
+        coeffs[..n].copy_from_slice(&poly[1..n + 1]);
 
         LpcCoefficients {
             coeffs,
