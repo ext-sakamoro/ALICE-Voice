@@ -4,17 +4,12 @@
 //!
 //! Note: L3 Semantic Layer benchmarks are available in the Commercial version.
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId, Throughput};
-use alice_voice::layers::{
-    SpectralLayer, SpectralParams,
-    ParametricLayer, ParametricParams,
-};
+use alice_voice::layers::{ParametricLayer, ParametricParams, SpectralLayer, SpectralParams};
 use alice_voice::simd::arm::{
-    q16_dot_product_neon,
-    q16_cosine_similarity_neon,
-    q16_lpc_filter_neon,
+    q16_cosine_similarity_neon, q16_dot_product_neon, q16_lpc_filter_neon,
 };
 use alice_voice::types::EMBEDDING_DIM;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 // ============================================
 // Test Audio Generation
@@ -60,11 +55,7 @@ fn bench_spectral_layer(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("encode", frame_size),
             &audio,
-            |b, audio| {
-                b.iter(|| {
-                    layer.analyze_stream(black_box(audio)).unwrap()
-                })
-            },
+            |b, audio| b.iter(|| layer.analyze_stream(black_box(audio)).unwrap()),
         );
 
         // Get encoded data for decode benchmark
@@ -74,11 +65,7 @@ fn bench_spectral_layer(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("decode", frame_size),
             &encoded,
-            |b, encoded| {
-                b.iter(|| {
-                    layer.synthesize_stream(black_box(encoded))
-                })
-            },
+            |b, encoded| b.iter(|| layer.synthesize_stream(black_box(encoded))),
         );
     }
 
@@ -105,15 +92,13 @@ fn bench_parametric_layer(c: &mut Criterion) {
         group.throughput(Throughput::Elements(samples as u64));
 
         // Encode benchmark
-        group.bench_with_input(
-            BenchmarkId::new("encode", lpc_order),
-            &audio,
-            |b, audio| {
-                b.iter(|| {
-                    layer.analyze_stream(black_box(audio), frame_size / 2).unwrap()
-                })
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("encode", lpc_order), &audio, |b, audio| {
+            b.iter(|| {
+                layer
+                    .analyze_stream(black_box(audio), frame_size / 2)
+                    .unwrap()
+            })
+        });
 
         // Get encoded data for decode benchmark
         let encoded = layer.analyze_stream(&audio, frame_size / 2).unwrap();
@@ -122,11 +107,7 @@ fn bench_parametric_layer(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("decode", lpc_order),
             &encoded,
-            |b, encoded| {
-                b.iter(|| {
-                    layer.synthesize_stream(black_box(encoded), frame_size / 2)
-                })
-            },
+            |b, encoded| b.iter(|| layer.synthesize_stream(black_box(encoded), frame_size / 2)),
         );
     }
 
@@ -142,19 +123,19 @@ fn bench_simd_operations(c: &mut Criterion) {
 
     // Q16 Dot Product
     for size in [64, 256, 1024, 4096].iter() {
-        let a: Vec<i32> = (0..*size).map(|i| (i as f32 * 0.001 * 65536.0) as i32).collect();
-        let b: Vec<i32> = (0..*size).map(|i| ((i as f32 * 0.002).sin() * 65536.0) as i32).collect();
+        let a: Vec<i32> = (0..*size)
+            .map(|i| (i as f32 * 0.001 * 65536.0) as i32)
+            .collect();
+        let b: Vec<i32> = (0..*size)
+            .map(|i| ((i as f32 * 0.002).sin() * 65536.0) as i32)
+            .collect();
 
         group.throughput(Throughput::Elements(*size as u64));
 
         group.bench_with_input(
             BenchmarkId::new("dot_product", size),
             &(&a, &b),
-            |bench, (a, b)| {
-                bench.iter(|| {
-                    q16_dot_product_neon(black_box(a), black_box(b))
-                })
-            },
+            |bench, (a, b)| bench.iter(|| q16_dot_product_neon(black_box(a), black_box(b))),
         );
     }
 
@@ -168,17 +149,19 @@ fn bench_simd_operations(c: &mut Criterion) {
         }
 
         group.bench_function("cosine_similarity_256", |bench| {
-            bench.iter(|| {
-                q16_cosine_similarity_neon(black_box(&a), black_box(&b))
-            })
+            bench.iter(|| q16_cosine_similarity_neon(black_box(&a), black_box(&b)))
         });
     }
 
     // Q16 LPC Filter
     for order in [10, 16, 24].iter() {
-        let coeffs: Vec<i32> = (0..*order).map(|i| ((i as f32 * 0.1).sin() * 32768.0) as i32).collect();
+        let coeffs: Vec<i32> = (0..*order)
+            .map(|i| ((i as f32 * 0.1).sin() * 32768.0) as i32)
+            .collect();
         let gain = 65536; // 1.0 in Q16
-        let excitation: Vec<i32> = (0..1024).map(|i| if i % 80 == 0 { 65536 } else { 0 }).collect();
+        let excitation: Vec<i32> = (0..1024)
+            .map(|i| if i % 80 == 0 { 65536 } else { 0 })
+            .collect();
         let mut output = vec![0i32; 1024];
 
         group.throughput(Throughput::Elements(1024));

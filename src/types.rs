@@ -211,7 +211,13 @@ pub struct VoiceFrameHeader {
 }
 
 impl VoiceFrameHeader {
-    pub fn new(layer_type: VoiceLayerType, packet_type: VoicePacketType, quality: VoiceQuality, sequence: u32, payload_size: u32) -> Self {
+    pub fn new(
+        layer_type: VoiceLayerType,
+        packet_type: VoicePacketType,
+        quality: VoiceQuality,
+        sequence: u32,
+        payload_size: u32,
+    ) -> Self {
         Self {
             magic: [0x41, 0x56, 0x4F, 0x31], // "AVO1"
             version: 1,
@@ -242,7 +248,7 @@ pub struct SpeakerEmbedding {
     /// Speaker ID vector (fixed-size for zero allocation)
     #[serde(with = "BigArray")]
     pub vector: [f32; EMBEDDING_DIM],
-    /// Speaker name hash (replaces Option<String> to enable Copy)
+    /// Speaker name hash (replaces `Option<String>` to enable Copy)
     pub name_hash: u64,
 }
 
@@ -259,7 +265,10 @@ impl SpeakerEmbedding {
     /// Create from fixed-size array (zero-copy)
     #[inline]
     pub fn from_array(vector: [f32; EMBEDDING_DIM]) -> Self {
-        Self { vector, name_hash: 0 }
+        Self {
+            vector,
+            name_hash: 0,
+        }
     }
 
     /// Create from slice (copies into fixed array)
@@ -267,7 +276,10 @@ impl SpeakerEmbedding {
         let mut arr = [0.0f32; EMBEDDING_DIM];
         let len = vector.len().min(EMBEDDING_DIM);
         arr[..len].copy_from_slice(&vector[..len]);
-        Self { vector: arr, name_hash: 0 }
+        Self {
+            vector: arr,
+            name_hash: 0,
+        }
     }
 
     /// Create from slice reference (copies into fixed array)
@@ -276,7 +288,10 @@ impl SpeakerEmbedding {
         let mut arr = [0.0f32; EMBEDDING_DIM];
         let len = slice.len().min(EMBEDDING_DIM);
         arr[..len].copy_from_slice(&slice[..len]);
-        Self { vector: arr, name_hash: 0 }
+        Self {
+            vector: arr,
+            name_hash: 0,
+        }
     }
 
     /// Set name via hash (FNV-1a for speed)
@@ -368,7 +383,7 @@ fn fnv1a_hash(bytes: &[u8]) -> u64 {
 pub fn fast_inv_sqrt(x: f32) -> f32 {
     let half = 0.5 * x;
     let i = x.to_bits();
-    let i = 0x5f375a86 - (i >> 1);  // Magic constant
+    let i = 0x5f375a86 - (i >> 1); // Magic constant
     let y = f32::from_bits(i);
     // One Newton-Raphson iteration for better accuracy
     y * (1.5 - half * y * y)

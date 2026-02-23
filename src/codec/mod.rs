@@ -5,10 +5,10 @@
 //! - Formant extraction and reconstruction
 //! - Pitch detection and generation
 
-pub mod lpc;
 pub mod formant;
+pub mod lpc;
 pub mod pitch;
 
+pub use formant::{Formant, FormantExtractor};
 pub use lpc::{LpcAnalyzer, LpcCoefficients};
-pub use formant::{FormantExtractor, Formant};
 pub use pitch::{PitchDetector, PitchInfo};

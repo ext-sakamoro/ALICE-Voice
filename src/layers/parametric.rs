@@ -26,10 +26,12 @@
 //! - Pre-allocated output buffers for all components
 //! - `analyze_into` pattern eliminates per-frame allocation
 
-use crate::types::{VoiceError, VoiceResult, VoiceQuality, VoiceActivity};
+use crate::codec::formant::{Formant, FormantExtractor};
 use crate::codec::lpc::{LpcAnalyzer, LpcCoefficients};
-use crate::codec::formant::{FormantExtractor, Formant};
-use crate::codec::pitch::{PitchDetector, PitchInfo, generate_excitation, generate_excitation_into};
+use crate::codec::pitch::{
+    generate_excitation, generate_excitation_into, PitchDetector, PitchInfo,
+};
+use crate::types::{VoiceActivity, VoiceError, VoiceQuality, VoiceResult};
 use serde::{Deserialize, Serialize};
 
 // ============================================
@@ -273,7 +275,10 @@ impl ParametricLayer {
     ///
     /// This method performs zero heap allocation per frame, making it
     /// suitable for real-time audio processing.
-    pub fn analyze_into<'a>(&'a mut self, samples: &[f32]) -> VoiceResult<ParametricParamsView<'a>> {
+    pub fn analyze_into<'a>(
+        &'a mut self,
+        samples: &[f32],
+    ) -> VoiceResult<ParametricParamsView<'a>> {
         if samples.len() < self.frame_size {
             return Err(VoiceError::BufferTooSmall {
                 need: self.frame_size,
@@ -352,7 +357,11 @@ impl ParametricLayer {
     ///
     /// This method performs zero heap allocation, using the layer's internal
     /// synthesis buffer for intermediate results.
-    pub fn synthesize_into(&mut self, params: &ParametricParamsView<'_>, output: &mut [f32]) -> VoiceResult<()> {
+    pub fn synthesize_into(
+        &mut self,
+        params: &ParametricParamsView<'_>,
+        output: &mut [f32],
+    ) -> VoiceResult<()> {
         if output.len() < params.frame_size {
             return Err(VoiceError::BufferTooSmall {
                 need: params.frame_size,
@@ -361,7 +370,11 @@ impl ParametricLayer {
         }
 
         // Generate excitation into internal buffer
-        generate_excitation_into(&params.pitch, &mut self.out_synthesis[..params.frame_size], params.sample_rate);
+        generate_excitation_into(
+            &params.pitch,
+            &mut self.out_synthesis[..params.frame_size],
+            params.sample_rate,
+        );
 
         // Apply LPC synthesis filter with 4x unrolling
         let frame_size = params.frame_size;
@@ -401,7 +414,11 @@ impl ParametricLayer {
     }
 
     /// Process multiple frames
-    pub fn analyze_stream(&mut self, samples: &[f32], hop_size: usize) -> VoiceResult<Vec<ParametricParams>> {
+    pub fn analyze_stream(
+        &mut self,
+        samples: &[f32],
+        hop_size: usize,
+    ) -> VoiceResult<Vec<ParametricParams>> {
         let mut params_list = Vec::new();
         let mut pos = 0;
 
@@ -527,9 +544,7 @@ mod tests {
     fn test_fixed_point_conversion() {
         let mut layer = ParametricLayer::new(10, 1024, 16000);
 
-        let samples: Vec<f32> = (0..1024)
-            .map(|i| (i as f32 * 0.01).sin())
-            .collect();
+        let samples: Vec<f32> = (0..1024).map(|i| (i as f32 * 0.01).sin()).collect();
 
         let params = layer.analyze(&samples).unwrap();
         let fixed = params.to_fixed();
@@ -541,9 +556,7 @@ mod tests {
     fn test_compression_ratio() {
         let mut layer = ParametricLayer::new(10, 1024, 16000);
 
-        let samples: Vec<f32> = (0..1024)
-            .map(|i| (i as f32 * 0.02).sin() * 0.5)
-            .collect();
+        let samples: Vec<f32> = (0..1024).map(|i| (i as f32 * 0.02).sin() * 0.5).collect();
 
         let params = layer.analyze(&samples).unwrap();
 

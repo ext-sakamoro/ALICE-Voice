@@ -11,15 +11,12 @@
 //!
 //! Note: L3 Semantic Layer is available under Commercial License.
 
-use crate::types::{VoiceResult, VoiceQuality};
-use crate::layers::{
-    SpectralLayer, SpectralParams,
-    ParametricLayer, ParametricParams,
-};
+use crate::layers::{ParametricLayer, ParametricParams, SpectralLayer, SpectralParams};
+use crate::types::{VoiceQuality, VoiceResult};
 use serde::{Deserialize, Serialize};
 
 // Re-export convenience functions from layers
-pub use crate::layers::parametric::{voice_to_params, params_to_voice};
+pub use crate::layers::parametric::{params_to_voice, voice_to_params};
 
 /// Voice codec configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,7 +87,7 @@ impl VoiceCodecConfig {
 /// Unified voice codec supporting L1-L2 layers
 ///
 /// Note: L3 Semantic Layer is available under Commercial License.
-/// See: https://github.com/ext-sakamoro/ALICE-Voice-Commercial
+/// See: <https://github.com/ext-sakamoro/ALICE-Voice-Commercial>
 #[derive(Debug)]
 pub struct VoiceCodec {
     /// Configuration
@@ -111,7 +108,8 @@ impl VoiceCodec {
                 config.lpc_order,
                 config.frame_size,
                 config.sample_rate,
-            ).with_quality(config.quality),
+            )
+            .with_quality(config.quality),
             config,
         }
     }
@@ -146,12 +144,14 @@ impl VoiceCodec {
 
     /// Encode to L2 (Parametric)
     pub fn encode_parametric(&mut self, samples: &[f32]) -> VoiceResult<Vec<ParametricParams>> {
-        self.parametric.analyze_stream(samples, self.config.hop_size)
+        self.parametric
+            .analyze_stream(samples, self.config.hop_size)
     }
 
     /// Decode from L2 (Parametric)
     pub fn decode_parametric(&self, params: &[ParametricParams]) -> Vec<f32> {
-        self.parametric.synthesize_stream(params, self.config.hop_size)
+        self.parametric
+            .synthesize_stream(params, self.config.hop_size)
     }
 
     // ============================================
@@ -166,7 +166,11 @@ impl VoiceCodec {
     }
 
     /// Calculate compression ratio for L2
-    pub fn compression_ratio_parametric(&self, samples: &[f32], params: &[ParametricParams]) -> f32 {
+    pub fn compression_ratio_parametric(
+        &self,
+        samples: &[f32],
+        params: &[ParametricParams],
+    ) -> f32 {
         let original_size = samples.len() * 4;
         let compressed_size: usize = params.iter().map(|p| p.encoded_size()).sum();
         original_size as f32 / compressed_size as f32

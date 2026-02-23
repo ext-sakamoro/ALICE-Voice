@@ -9,7 +9,7 @@
 //! - YIN algorithm for robust estimation
 //! - AMDF (Average Magnitude Difference Function)
 
-use crate::types::{VoiceError, VoiceResult, VoiceActivity};
+use crate::types::{VoiceActivity, VoiceError, VoiceResult};
 use serde::{Deserialize, Serialize};
 
 /// Pitch detection result
@@ -555,9 +555,7 @@ mod tests {
 
         // Generate simple sine wave at 200 Hz
         let samples: Vec<f32> = (0..1024)
-            .map(|i| {
-                (2.0 * std::f32::consts::PI * 200.0 * i as f32 / 16000.0).sin()
-            })
+            .map(|i| (2.0 * std::f32::consts::PI * 200.0 * i as f32 / 16000.0).sin())
             .collect();
 
         let pitch = detector.detect(&samples).unwrap();
@@ -574,9 +572,7 @@ mod tests {
 
         // Generate sine wave at 300 Hz
         let samples: Vec<f32> = (0..1024)
-            .map(|i| {
-                (2.0 * std::f32::consts::PI * 300.0 * i as f32 / 16000.0).sin()
-            })
+            .map(|i| (2.0 * std::f32::consts::PI * 300.0 * i as f32 / 16000.0).sin())
             .collect();
 
         let pitch = detector.detect(&samples).unwrap();

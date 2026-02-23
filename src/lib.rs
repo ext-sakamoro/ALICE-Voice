@@ -14,7 +14,7 @@
 //! | L1 | Spectral | FFT/DCT coefficients | 10-50x |
 //!
 //! Note: L3 Semantic Layer (1000x+ compression) is available under Commercial License.
-//! See: https://github.com/ext-sakamoro/ALICE-Voice-Commercial
+//! See: <https://github.com/ext-sakamoro/ALICE-Voice-Commercial>
 //!
 //! # Example
 //!
@@ -37,11 +37,11 @@
 //! - [ALICE-Streaming-Protocol](https://github.com/ext-sakamoro/ALICE-Streaming-Protocol) - Video streaming
 //! - [ALICE-Zip](https://github.com/ext-sakamoro/ALICE-Zip) - Procedural compression
 
-pub mod types;
-pub mod layers;
-pub mod codec;
 pub mod api;
+pub mod codec;
+pub mod layers;
 pub mod simd;
+pub mod types;
 
 #[cfg(feature = "python")]
 pub mod python;
@@ -59,19 +59,16 @@ pub mod db_bridge;
 pub mod text_bridge;
 
 // Re-export main types
-pub use types::*;
 pub use api::*;
+pub use types::*;
 
 // Re-export layer modules
-pub use layers::{
-    SpectralLayer, SpectralParams,
-    ParametricLayer, ParametricParams,
-};
+pub use layers::{ParametricLayer, ParametricParams, SpectralLayer, SpectralParams};
 
 // Re-export codec modules
 pub use codec::{
+    formant::{Formant, FormantExtractor},
     lpc::{LpcAnalyzer, LpcCoefficients},
-    formant::{FormantExtractor, Formant},
     pitch::{PitchDetector, PitchInfo},
 };
 

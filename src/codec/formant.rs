@@ -491,7 +491,11 @@ impl FormantExtractor {
             }
         }
 
-        formants.sort_by(|a, b| a.frequency.partial_cmp(&b.frequency).unwrap_or(std::cmp::Ordering::Equal));
+        formants.sort_by(|a, b| {
+            a.frequency
+                .partial_cmp(&b.frequency)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         Ok(FormantResult {
             formants,
@@ -588,7 +592,9 @@ mod tests {
         let extractor = FormantExtractor::new(16000);
 
         let lpc = LpcCoefficients {
-            coeffs: vec![1.5, -0.8, 0.3, -0.1, 0.05, -0.02, 0.01, -0.005, 0.002, -0.001],
+            coeffs: vec![
+                1.5, -0.8, 0.3, -0.1, 0.05, -0.02, 0.01, -0.005, 0.002, -0.001,
+            ],
             gain: 0.1,
             reflection: vec![],
             error: 0.0,

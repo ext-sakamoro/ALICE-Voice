@@ -3,7 +3,7 @@
 //! Ternary neural inference for voice parameter estimation.
 //! Uses 1.58-bit weights for ultra-fast LPC/formant/pitch prediction.
 
-use alice_ml::{TernaryWeight, ternary_matvec};
+use alice_ml::{ternary_matvec, TernaryWeight};
 
 /// ML-accelerated voice parameter predictor.
 ///
@@ -47,7 +47,11 @@ impl VoicePredictor {
     pub fn predict_lpc(&self, spectral_input: &[f32], output: &mut [f32]) {
         debug_assert_eq!(spectral_input.len(), self.input_dim);
         debug_assert!(output.len() >= self.lpc_order);
-        ternary_matvec(spectral_input, &self.weights_lpc, &mut output[..self.lpc_order]);
+        ternary_matvec(
+            spectral_input,
+            &self.weights_lpc,
+            &mut output[..self.lpc_order],
+        );
     }
 
     /// Predict pitch from spectral features.
@@ -59,9 +63,13 @@ impl VoicePredictor {
     }
 
     /// Input dimension.
-    pub fn input_dim(&self) -> usize { self.input_dim }
+    pub fn input_dim(&self) -> usize {
+        self.input_dim
+    }
     /// LPC order.
-    pub fn lpc_order(&self) -> usize { self.lpc_order }
+    pub fn lpc_order(&self) -> usize {
+        self.lpc_order
+    }
 }
 
 #[cfg(test)]

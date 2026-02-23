@@ -3,15 +3,10 @@
 //! These provide the same API as the ARM NEON implementations
 //! but use standard scalar operations.
 
-use crate::types::{Q16_SHIFT, EMBEDDING_DIM};
+use crate::types::{EMBEDDING_DIM, Q16_SHIFT};
 
 // Re-export from arm module for consistency
-pub use super::arm::{
-    q16_mul,
-    q16_mac,
-    fast_isqrt_64,
-    fast_isqrt_32,
-};
+pub use super::arm::{fast_isqrt_32, fast_isqrt_64, q16_mac, q16_mul};
 
 /// Scalar 4x Q16 multiply (no SIMD)
 #[inline]
@@ -64,12 +59,7 @@ pub fn q16_cosine_similarity_neon(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_
 }
 
 /// Scalar LPC filter
-pub fn q16_lpc_filter_neon(
-    coeffs: &[i32],
-    gain: i32,
-    excitation: &[i32],
-    output: &mut [i32],
-) {
+pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output: &mut [i32]) {
     let order = coeffs.len();
     let n = excitation.len().min(output.len());
 

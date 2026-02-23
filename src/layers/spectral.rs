@@ -26,7 +26,7 @@
 //! - 4x loop unrolling for SIMD auto-vectorization
 //! - Inplace transforms with buffer reuse
 
-use crate::types::{VoiceResult, VoiceQuality, DEFAULT_FRAME_SIZE, DEFAULT_HOP_SIZE};
+use crate::types::{VoiceQuality, VoiceResult, DEFAULT_FRAME_SIZE, DEFAULT_HOP_SIZE};
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 
@@ -376,7 +376,8 @@ impl SpectralLayer {
         self.quantize_inplace();
 
         // 4. Sparse encoding (only non-zero coefficients)
-        let coefficients: Vec<(u16, f32)> = self.ws_quantized
+        let coefficients: Vec<(u16, f32)> = self
+            .ws_quantized
             .iter()
             .take(n)
             .enumerate()

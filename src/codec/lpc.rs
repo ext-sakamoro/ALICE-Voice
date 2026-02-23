@@ -22,7 +22,7 @@
 //! let owned = view.to_owned(); // Only allocate when needed
 //! ```
 
-use crate::types::{VoiceError, VoiceResult, Q16_SHIFT, Q16_ONE};
+use crate::types::{VoiceError, VoiceResult, Q16_ONE, Q16_SHIFT};
 use serde::{Deserialize, Serialize};
 
 // =============================================================================
@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
 /// LPC coefficients container (Owned version for serialization)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LpcCoefficients {
-    /// LPC coefficients (a[1] to a[order])
+    /// LPC coefficients (`a[1]` to `a[order]`)
     pub coeffs: Vec<f32>,
     /// Prediction gain
     pub gain: f32,
@@ -59,7 +59,11 @@ impl LpcCoefficients {
     /// Convert to Q16.16 fixed-point format
     pub fn to_fixed(&self) -> LpcCoefficientsFixed {
         LpcCoefficientsFixed {
-            coeffs: self.coeffs.iter().map(|&c| (c * Q16_ONE as f32) as i32).collect(),
+            coeffs: self
+                .coeffs
+                .iter()
+                .map(|&c| (c * Q16_ONE as f32) as i32)
+                .collect(),
             gain: (self.gain * Q16_ONE as f32) as i32,
         }
     }
@@ -71,7 +75,7 @@ impl LpcCoefficients {
 /// No allocation occurs. Call `to_owned()` if you need to store the result.
 #[derive(Debug, Clone, Copy)]
 pub struct LpcCoefficientsView<'a> {
-    /// LPC coefficients (a[1] to a[order])
+    /// LPC coefficients (`a[1]` to `a[order]`)
     pub coeffs: &'a [f32],
     /// Reflection coefficients (PARCOR)
     pub reflection: &'a [f32],
@@ -110,7 +114,11 @@ impl LpcCoefficientsFixed {
     /// Convert back to floating-point
     pub fn to_float(&self) -> LpcCoefficients {
         LpcCoefficients {
-            coeffs: self.coeffs.iter().map(|&c| c as f32 / Q16_ONE as f32).collect(),
+            coeffs: self
+                .coeffs
+                .iter()
+                .map(|&c| c as f32 / Q16_ONE as f32)
+                .collect(),
             gain: self.gain as f32 / Q16_ONE as f32,
             reflection: vec![],
             error: 0.0,
@@ -169,7 +177,8 @@ impl LpcAnalyzer {
         // Pre-compute Hamming window
         let window: Vec<f32> = (0..frame_size)
             .map(|i| {
-                0.54 - 0.46 * (2.0 * std::f32::consts::PI * i as f32 / (frame_size - 1) as f32).cos()
+                0.54 - 0.46
+                    * (2.0 * std::f32::consts::PI * i as f32 / (frame_size - 1) as f32).cos()
             })
             .collect();
 
@@ -201,9 +210,7 @@ impl LpcAnalyzer {
     fn resize_buffers(&mut self, n: usize) {
         self.frame_size = n;
         self.window = (0..n)
-            .map(|i| {
-                0.54 - 0.46 * (2.0 * std::f32::consts::PI * i as f32 / (n - 1) as f32).cos()
-            })
+            .map(|i| 0.54 - 0.46 * (2.0 * std::f32::consts::PI * i as f32 / (n - 1) as f32).cos())
             .collect();
         self.ws_signal.resize(n, 0.0);
     }
@@ -273,7 +280,11 @@ impl LpcAnalyzer {
     /// # True Zero-Allocation
     ///
     /// This method performs NO heap allocation. Caller provides output buffer.
-    pub fn analyze_into(&mut self, samples: &[f32], output: &mut LpcCoefficients) -> VoiceResult<()> {
+    pub fn analyze_into(
+        &mut self,
+        samples: &[f32],
+        output: &mut LpcCoefficients,
+    ) -> VoiceResult<()> {
         let view = self.analyze_view(samples)?;
 
         output.coeffs.clear();
@@ -639,11 +650,7 @@ pub mod lpc_fixed {
             }
         }
 
-        let gain = if error > 0 {
-            fast_isqrt(error)
-        } else {
-            0
-        };
+        let gain = if error > 0 { fast_isqrt(error) } else { 0 };
 
         Ok(LpcCoefficientsFixed { coeffs, gain })
     }

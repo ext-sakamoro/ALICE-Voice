@@ -6,14 +6,10 @@
 use pyo3::prelude::*;
 
 #[cfg(feature = "python")]
-use numpy::{PyArray1, PyReadonlyArray1, IntoPyArray};
+use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 
 #[cfg(feature = "python")]
-use crate::{
-    VoiceCodec, VoiceCodecConfig, VoiceQuality,
-    ParametricParams,
-    EmotionType,
-};
+use crate::{EmotionType, ParametricParams, VoiceCodec, VoiceCodecConfig, VoiceQuality};
 
 /// Python wrapper for VoiceCodec
 #[cfg(feature = "python")]
@@ -83,9 +79,11 @@ fn voice_to_params<'py>(
     let samples = audio.as_slice()?;
 
     let samples_owned: Vec<f32> = samples.to_vec();
-    let params = py.allow_threads(|| {
-        crate::layers::parametric::voice_to_params(&samples_owned, sample_rate)
-    }).map_err(|e: crate::types::VoiceError| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
+    let params = py
+        .allow_threads(|| crate::layers::parametric::voice_to_params(&samples_owned, sample_rate))
+        .map_err(|e: crate::types::VoiceError| {
+            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string())
+        })?;
 
     // Convert to Python dicts
     let result: Vec<PyObject> = params
@@ -209,8 +207,8 @@ fn emotion_encode<'py>(
 
     // Compute basic energy features in Rust (GIL-free)
     let (avg_pitch, avg_energy) = py.allow_threads(move || {
-        let energy: f32 = samples_owned.iter().map(|&s| s * s).sum::<f32>()
-            / samples_owned.len() as f32;
+        let energy: f32 =
+            samples_owned.iter().map(|&s| s * s).sum::<f32>() / samples_owned.len() as f32;
         let energy_db = 10.0 * (energy + 1e-10_f32).log10();
         let avg_pitch = sample_rate as f32 / 80.0; // placeholder: 80 Hz
         (avg_pitch, energy_db)

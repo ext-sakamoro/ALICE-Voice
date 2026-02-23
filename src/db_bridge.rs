@@ -27,12 +27,12 @@ pub struct VoiceMetricsSink {
 impl VoiceMetricsSink {
     /// Open or create voice metrics databases at the given directory.
     pub fn open(dir: &str) -> Result<Self, String> {
-        let pitch_db = AliceDB::open(format!("{}/pitch", dir))
-            .map_err(|e| format!("pitch db: {}", e))?;
-        let gain_db = AliceDB::open(format!("{}/gain", dir))
-            .map_err(|e| format!("gain db: {}", e))?;
-        let voicing_db = AliceDB::open(format!("{}/voicing", dir))
-            .map_err(|e| format!("voicing db: {}", e))?;
+        let pitch_db =
+            AliceDB::open(format!("{}/pitch", dir)).map_err(|e| format!("pitch db: {}", e))?;
+        let gain_db =
+            AliceDB::open(format!("{}/gain", dir)).map_err(|e| format!("gain db: {}", e))?;
+        let voicing_db =
+            AliceDB::open(format!("{}/voicing", dir)).map_err(|e| format!("voicing db: {}", e))?;
         Ok(Self {
             pitch_db,
             gain_db,

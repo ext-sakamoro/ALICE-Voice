@@ -121,8 +121,7 @@ pub fn decompress_lpc_sequence(compressed: &CodecCompressedFrame) -> Vec<Vec<f32
     let lpc_order = compressed.lpc_order;
 
     // Parse header: orig_len + histogram
-    let orig_len =
-        u32::from_le_bytes(compressed.data[0..4].try_into().unwrap_or([0; 4])) as usize;
+    let orig_len = u32::from_le_bytes(compressed.data[0..4].try_into().unwrap_or([0; 4])) as usize;
     let padded_len = orig_len.next_power_of_two();
 
     let mut histogram = [0u32; 256];

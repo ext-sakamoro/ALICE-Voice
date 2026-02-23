@@ -6,7 +6,7 @@
 //! - Pre-reversed coefficients for LPC to eliminate shuffling
 //! - Raw pointer arithmetic
 
-use crate::types::{Q16_SHIFT, EMBEDDING_DIM};
+use crate::types::{EMBEDDING_DIM, Q16_SHIFT};
 
 #[cfg(target_arch = "aarch64")]
 use core::arch::aarch64::*;
@@ -142,7 +142,11 @@ pub fn q16_dot_product_neon(a: &[i32], b: &[i32]) -> i64 {
 #[cfg(not(target_arch = "aarch64"))]
 pub fn q16_dot_product_neon(a: &[i32], b: &[i32]) -> i64 {
     // Fallback
-    a.iter().zip(b.iter()).map(|(&x, &y)| x as i64 * y as i64).sum::<i64>() >> Q16_SHIFT
+    a.iter()
+        .zip(b.iter())
+        .map(|(&x, &y)| x as i64 * y as i64)
+        .sum::<i64>()
+        >> Q16_SHIFT
 }
 
 // ============================================
@@ -271,12 +275,7 @@ pub fn q16_cosine_similarity_neon(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_
 ///
 /// Now `rev_coeffs` and the tail of `y` are aligned for a direct SIMD dot product!
 #[cfg(target_arch = "aarch64")]
-pub fn q16_lpc_filter_neon(
-    coeffs: &[i32],
-    gain: i32,
-    excitation: &[i32],
-    output: &mut [i32],
-) {
+pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output: &mut [i32]) {
     let order = coeffs.len();
     let n = excitation.len().min(output.len());
 
@@ -426,7 +425,12 @@ mod tests {
         let b = (4.0 * 65536.0) as i32;
         let result = q16_mul(a, b);
         let expected = (10.0 * 65536.0) as i32;
-        assert!((result - expected).abs() < 2, "q16_mul failed: {} vs {}", result, expected);
+        assert!(
+            (result - expected).abs() < 2,
+            "q16_mul failed: {} vs {}",
+            result,
+            expected
+        );
     }
 
     #[test]
@@ -460,7 +464,9 @@ mod tests {
             assert!(
                 (result[i] - expected[i]).abs() < 2,
                 "q16_mul_4x[{}] failed: {} vs {}",
-                i, result[i], expected[i]
+                i,
+                result[i],
+                expected[i]
             );
         }
     }
@@ -483,12 +489,17 @@ mod tests {
     #[test]
     fn test_q16_dot_product() {
         let a = [65536i32, 131072, 196608]; // 1.0, 2.0, 3.0 in Q16
-        let b = [65536i32, 65536, 65536];   // 1.0, 1.0, 1.0 in Q16
+        let b = [65536i32, 65536, 65536]; // 1.0, 1.0, 1.0 in Q16
 
         let result = q16_dot_product_neon(&a, &b);
         // Expected: 1*1 + 2*1 + 3*1 = 6.0 in Q16 = 393216
         let expected = 6 * 65536i64;
-        assert!((result - expected).abs() < 10, "dot product: {} vs {}", result, expected);
+        assert!(
+            (result - expected).abs() < 10,
+            "dot product: {} vs {}",
+            result,
+            expected
+        );
     }
 
     #[test]
@@ -514,7 +525,11 @@ mod tests {
         }
         let sim_ortho = q16_cosine_similarity_neon(&a, &c);
         // Should be close to 0.0
-        assert!(sim_ortho.abs() < 1000, "orthogonal similarity should be ~0: {}", sim_ortho);
+        assert!(
+            sim_ortho.abs() < 1000,
+            "orthogonal similarity should be ~0: {}",
+            sim_ortho
+        );
     }
 
     #[test]

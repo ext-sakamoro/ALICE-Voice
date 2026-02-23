@@ -22,7 +22,11 @@ pub fn extract_voice_metadata(frame: &[f32], sample_rate: u32) -> VoiceTextMetad
 
     // Energy in dB
     let energy = frame.iter().map(|s| s * s).sum::<f32>() / frame.len().max(1) as f32;
-    let energy_db = if energy > 1e-10 { 10.0 * energy.log10() } else { -100.0 };
+    let energy_db = if energy > 1e-10 {
+        10.0 * energy.log10()
+    } else {
+        -100.0
+    };
 
     // Simple zero-crossing rate as pitch proxy
     let mut zero_crossings = 0u32;
@@ -31,7 +35,8 @@ pub fn extract_voice_metadata(frame: &[f32], sample_rate: u32) -> VoiceTextMetad
             zero_crossings += 1;
         }
     }
-    let pitch_mean = (zero_crossings as f32 * sample_rate as f32) / (2.0 * frame.len().max(1) as f32);
+    let pitch_mean =
+        (zero_crossings as f32 * sample_rate as f32) / (2.0 * frame.len().max(1) as f32);
 
     VoiceTextMetadata {
         transcript_hint: String::new(), // Filled by downstream STT
@@ -48,7 +53,9 @@ pub fn compress_voice_transcript(metadata: &VoiceTextMetadata) -> Vec<u8> {
         metadata.transcript_hint, metadata.pitch_mean, metadata.energy_db, metadata.duration_ms
     );
     let compressor = ALICEText::new();
-    compressor.compress(&serialized).unwrap_or_else(|_| serialized.into_bytes())
+    compressor
+        .compress(&serialized)
+        .unwrap_or_else(|_| serialized.into_bytes())
 }
 
 /// Decompress voice transcript metadata
