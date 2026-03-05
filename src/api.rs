@@ -128,7 +128,7 @@ impl VoiceCodec {
 
     /// Get configuration
     #[must_use]
-    pub fn config(&self) -> &VoiceCodecConfig {
+    pub const fn config(&self) -> &VoiceCodecConfig {
         &self.config
     }
 
@@ -300,18 +300,18 @@ mod tests {
         // L1: Spectral
         let spectral_params = codec.encode_spectral(&samples).unwrap();
         let spectral_decoded = codec.decode_spectral(&spectral_params);
-        assert!(spectral_decoded.len() > 0);
+        assert!(!spectral_decoded.is_empty());
 
         let ratio1 = codec.compression_ratio_spectral(&samples, &spectral_params);
-        println!("L1 compression: {:.1}x", ratio1);
+        println!("L1 compression: {ratio1:.1}x");
 
         // L2: Parametric
         let parametric_params = codec.encode_parametric(&samples).unwrap();
         let parametric_decoded = codec.decode_parametric(&parametric_params);
-        assert!(parametric_decoded.len() > 0);
+        assert!(!parametric_decoded.is_empty());
 
         let ratio2 = codec.compression_ratio_parametric(&samples, &parametric_params);
-        println!("L2 compression: {:.1}x", ratio2);
+        println!("L2 compression: {ratio2:.1}x");
 
         // All layers should achieve some compression
         assert!(ratio1 > 1.0, "L1 should compress");
@@ -334,7 +334,7 @@ mod tests {
         let params = codec.encode_parametric(&samples).unwrap();
         let stats = EncodingStats::from_parametric(&params, samples.len());
 
-        println!("Stats: {:?}", stats);
+        println!("Stats: {stats:?}");
         assert!(stats.frames_processed > 0);
         assert!(stats.compression_ratio > 1.0);
     }

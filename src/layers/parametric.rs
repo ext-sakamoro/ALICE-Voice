@@ -76,7 +76,7 @@ impl ParametricParams {
 
     /// Estimate encoded size in bytes
     #[must_use]
-    pub fn encoded_size(&self) -> usize {
+    pub const fn encoded_size(&self) -> usize {
         // LPC coeffs: order × 4 bytes
         // Gain: 4 bytes
         // Pitch: 8 bytes
@@ -169,7 +169,7 @@ impl ParametricParamsView<'_> {
     /// Estimate encoded size in bytes
     #[inline(always)]
     #[must_use]
-    pub fn encoded_size(&self) -> usize {
+    pub const fn encoded_size(&self) -> usize {
         4 + self.lpc_coeffs.len() * 4 + 4 + 8 + self.formant_count * 8 + 8
     }
 }
@@ -262,7 +262,7 @@ impl ParametricLayer {
     /// Get LPC order
     #[inline(always)]
     #[must_use]
-    pub fn lpc_order(&self) -> usize {
+    pub const fn lpc_order(&self) -> usize {
         self.lpc_order
     }
 
@@ -482,7 +482,7 @@ impl ParametricLayer {
                     let weight = if j < half_frame {
                         j as f32 * inv_half_frame
                     } else {
-                        1.0 - (j - half_frame) as f32 * inv_half_frame
+                        ((j - half_frame) as f32).mul_add(-inv_half_frame, 1.0)
                     };
                     output[start + j] += sample * weight;
                 }
@@ -566,10 +566,10 @@ mod tests {
             .collect();
 
         let params = voice_to_params(&samples, 16000).unwrap();
-        assert!(params.len() > 0);
+        assert!(!params.is_empty());
 
         let reconstructed = params_to_voice(&params, 16000);
-        assert!(reconstructed.len() > 0);
+        assert!(!reconstructed.is_empty());
     }
 
     #[test]
@@ -596,7 +596,7 @@ mod tests {
         let compressed_size = params.encoded_size();
 
         let ratio = original_size as f32 / compressed_size as f32;
-        println!("Compression ratio: {:.1}x", ratio);
+        println!("Compression ratio: {ratio:.1}x");
         // L2 should achieve significant compression
         assert!(ratio > 10.0);
     }

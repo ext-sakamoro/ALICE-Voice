@@ -3,8 +3,13 @@
 //! Measures performance of L1-L2 layers and SIMD operations.
 //!
 //! Note: L3 Semantic Layer benchmarks are available in the Commercial version.
+#![allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 
-use alice_voice::layers::{ParametricLayer, ParametricParams, SpectralLayer, SpectralParams};
+use alice_voice::layers::{ParametricLayer, SpectralLayer};
 use alice_voice::simd::arm::{
     q16_cosine_similarity_neon, q16_dot_product_neon, q16_lpc_filter_neon,
 };
@@ -40,7 +45,7 @@ fn bench_spectral_layer(c: &mut Criterion) {
     let mut group = c.benchmark_group("L1_Spectral");
 
     // Test different frame sizes
-    for frame_size in [256, 512, 1024].iter() {
+    for frame_size in &[256, 512, 1024] {
         let hop_size = frame_size / 2;
         let sample_rate = 16000;
         let duration_sec = 1.0;
@@ -80,7 +85,7 @@ fn bench_parametric_layer(c: &mut Criterion) {
     let mut group = c.benchmark_group("L2_Parametric");
 
     // Test different LPC orders
-    for lpc_order in [10, 16, 24].iter() {
+    for lpc_order in &[10, 16, 24] {
         let sample_rate = 16000;
         let frame_size = 1024; // 64ms for pitch detection
         let duration_sec = 1.0;
@@ -97,7 +102,7 @@ fn bench_parametric_layer(c: &mut Criterion) {
                 layer
                     .analyze_stream(black_box(audio), frame_size / 2)
                     .unwrap()
-            })
+            });
         });
 
         // Get encoded data for decode benchmark
@@ -122,7 +127,7 @@ fn bench_simd_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("SIMD");
 
     // Q16 Dot Product
-    for size in [64, 256, 1024, 4096].iter() {
+    for size in &[64, 256, 1024, 4096] {
         let a: Vec<i32> = (0..*size)
             .map(|i| (i as f32 * 0.001 * 65536.0) as i32)
             .collect();
@@ -149,12 +154,12 @@ fn bench_simd_operations(c: &mut Criterion) {
         }
 
         group.bench_function("cosine_similarity_256", |bench| {
-            bench.iter(|| q16_cosine_similarity_neon(black_box(&a), black_box(&b)))
+            bench.iter(|| q16_cosine_similarity_neon(black_box(&a), black_box(&b)));
         });
     }
 
     // Q16 LPC Filter
-    for order in [10, 16, 24].iter() {
+    for order in &[10, 16, 24] {
         let coeffs: Vec<i32> = (0..*order)
             .map(|i| ((i as f32 * 0.1).sin() * 32768.0) as i32)
             .collect();
@@ -176,8 +181,8 @@ fn bench_simd_operations(c: &mut Criterion) {
                         black_box(gain),
                         black_box(excitation),
                         black_box(&mut output),
-                    )
-                })
+                    );
+                });
             },
         );
     }
@@ -206,7 +211,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
             b.iter(|| {
                 let encoded = layer.analyze_stream(black_box(&audio)).unwrap();
                 layer.synthesize_stream(black_box(&encoded))
-            })
+            });
         });
     }
 
@@ -217,7 +222,7 @@ fn bench_full_pipeline(c: &mut Criterion) {
             b.iter(|| {
                 let encoded = layer.analyze_stream(black_box(&audio), 512).unwrap();
                 layer.synthesize_stream(black_box(&encoded), 512)
-            })
+            });
         });
     }
 

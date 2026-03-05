@@ -34,7 +34,7 @@ pub use scalar::*;
 #[cfg(target_arch = "aarch64")]
 #[inline]
 #[must_use]
-pub fn has_neon() -> bool {
+pub const fn has_neon() -> bool {
     // NEON is always available on aarch64
     true
 }
@@ -70,6 +70,6 @@ mod tests {
         #[cfg(target_arch = "aarch64")]
         assert!(has, "NEON should be available on aarch64");
 
-        println!("NEON available: {}", has);
+        println!("NEON available: {has}");
     }
 }

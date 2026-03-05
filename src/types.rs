@@ -41,9 +41,9 @@ impl TryFrom<u8> for VoiceLayerType {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x01 => Ok(VoiceLayerType::Spectral),
-            0x02 => Ok(VoiceLayerType::Parametric),
-            0x03 => Ok(VoiceLayerType::Semantic),
+            0x01 => Ok(Self::Spectral),
+            0x02 => Ok(Self::Parametric),
+            0x03 => Ok(Self::Semantic),
             _ => Err(VoiceError::InvalidLayerType(value)),
         }
     }
@@ -69,14 +69,14 @@ impl TryFrom<u8> for EmotionType {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x00 => Ok(EmotionType::Neutral),
-            0x01 => Ok(EmotionType::Happy),
-            0x02 => Ok(EmotionType::Sad),
-            0x03 => Ok(EmotionType::Angry),
-            0x04 => Ok(EmotionType::Fearful),
-            0x05 => Ok(EmotionType::Surprised),
-            0x06 => Ok(EmotionType::Disgusted),
-            0x07 => Ok(EmotionType::Contempt),
+            0x00 => Ok(Self::Neutral),
+            0x01 => Ok(Self::Happy),
+            0x02 => Ok(Self::Sad),
+            0x03 => Ok(Self::Angry),
+            0x04 => Ok(Self::Fearful),
+            0x05 => Ok(Self::Surprised),
+            0x06 => Ok(Self::Disgusted),
+            0x07 => Ok(Self::Contempt),
             _ => Err(VoiceError::InvalidEmotionType(value)),
         }
     }
@@ -100,23 +100,23 @@ pub enum VoiceQuality {
 impl VoiceQuality {
     /// Get recommended sample rate for quality level
     #[must_use]
-    pub fn sample_rate(&self) -> u32 {
+    pub const fn sample_rate(&self) -> u32 {
         match self {
-            VoiceQuality::Low => 8000,
-            VoiceQuality::Medium => 16000,
-            VoiceQuality::High => 32000,
-            VoiceQuality::Ultra => 48000,
+            Self::Low => 8000,
+            Self::Medium => 16000,
+            Self::High => 32000,
+            Self::Ultra => 48000,
         }
     }
 
     /// Get recommended LPC order for quality level
     #[must_use]
-    pub fn lpc_order(&self) -> usize {
+    pub const fn lpc_order(&self) -> usize {
         match self {
-            VoiceQuality::Low => 8,
-            VoiceQuality::Medium => 10,
-            VoiceQuality::High => 12,
-            VoiceQuality::Ultra => 16,
+            Self::Low => 8,
+            Self::Medium => 10,
+            Self::High => 12,
+            Self::Ultra => 16,
         }
     }
 }
@@ -140,10 +140,10 @@ impl TryFrom<u8> for VoicePacketType {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x01 => Ok(VoicePacketType::Keyframe),
-            0x02 => Ok(VoicePacketType::Delta),
-            0x03 => Ok(VoicePacketType::Silence),
-            0x04 => Ok(VoicePacketType::Control),
+            0x01 => Ok(Self::Keyframe),
+            0x02 => Ok(Self::Delta),
+            0x03 => Ok(Self::Silence),
+            0x04 => Ok(Self::Control),
             _ => Err(VoiceError::InvalidPacketType(value)),
         }
     }
@@ -214,7 +214,7 @@ pub struct VoiceFrameHeader {
 
 impl VoiceFrameHeader {
     #[must_use]
-    pub fn new(
+    pub const fn new(
         layer_type: VoiceLayerType,
         packet_type: VoicePacketType,
         quality: VoiceQuality,
@@ -273,7 +273,7 @@ impl SpeakerEmbedding {
     /// Create from fixed-size array (zero-copy)
     #[inline]
     #[must_use]
-    pub fn from_array(vector: [f32; EMBEDDING_DIM]) -> Self {
+    pub const fn from_array(vector: [f32; EMBEDDING_DIM]) -> Self {
         Self {
             vector,
             name_hash: 0,
@@ -318,13 +318,13 @@ impl SpeakerEmbedding {
     /// and fast inverse sqrt for ~3x speedup over naive implementation.
     #[inline]
     #[must_use]
-    pub fn similarity(&self, other: &SpeakerEmbedding) -> f32 {
+    pub fn similarity(&self, other: &Self) -> f32 {
         self.similarity_simd(other)
     }
 
     /// SIMD-optimized cosine similarity with 4x unrolling
     #[inline(always)]
-    fn similarity_simd(&self, other: &SpeakerEmbedding) -> f32 {
+    fn similarity_simd(&self, other: &Self) -> f32 {
         // 4x unrolling for SIMD auto-vectorization
         // EMBEDDING_DIM = 256 = 64 * 4, perfectly divisible
         const CHUNKS: usize = EMBEDDING_DIM / 4;
@@ -400,7 +400,7 @@ pub fn fast_inv_sqrt(x: f32) -> f32 {
     let i = 0x5f37_5a86 - (i >> 1); // Magic constant
     let y = f32::from_bits(i);
     // One Newton-Raphson iteration for better accuracy
-    y * (1.5 - half * y * y)
+    y * (half * y).mul_add(-y, 1.5)
 }
 
 /// Voice activity detection result
@@ -459,14 +459,14 @@ pub fn f32_to_q16(f: f32) -> i32 {
 /// Q16.16 multiply
 #[inline(always)]
 #[must_use]
-pub fn q16_mul(a: i32, b: i32) -> i32 {
+pub const fn q16_mul(a: i32, b: i32) -> i32 {
     ((a as i64 * b as i64) >> Q16_SHIFT) as i32
 }
 
 /// Q16.16 divide
 #[inline(always)]
 #[must_use]
-pub fn q16_div(a: i32, b: i32) -> i32 {
+pub const fn q16_div(a: i32, b: i32) -> i32 {
     if b == 0 {
         return 0;
     }
@@ -479,10 +479,10 @@ mod tests {
 
     #[test]
     fn test_q16_conversion() {
-        assert_eq!(int_to_q16(100), 6553600);
-        assert_eq!(q16_to_int(6553600), 100);
+        assert_eq!(int_to_q16(100), 6_553_600);
+        assert_eq!(q16_to_int(6_553_600), 100);
 
-        let f = 3.14159;
+        let f = std::f32::consts::PI;
         let q = f32_to_q16(f);
         let back = q16_to_f32(q);
         assert!((f - back).abs() < 0.0001);

@@ -50,7 +50,7 @@ pub struct Formant {
 
 impl Formant {
     #[must_use]
-    pub fn new(frequency: f32, bandwidth: f32) -> Self {
+    pub const fn new(frequency: f32, bandwidth: f32) -> Self {
         Self {
             frequency,
             bandwidth,
@@ -59,7 +59,7 @@ impl Formant {
     }
 
     #[must_use]
-    pub fn with_amplitude(mut self, amplitude: f32) -> Self {
+    pub const fn with_amplitude(mut self, amplitude: f32) -> Self {
         self.amplitude = amplitude;
         self
     }
@@ -76,7 +76,7 @@ pub struct FormantResult {
 
 impl FormantResult {
     #[must_use]
-    pub fn new(sample_rate: u32) -> Self {
+    pub const fn new(sample_rate: u32) -> Self {
         Self {
             formants: Vec::new(),
             sample_rate,
@@ -131,7 +131,11 @@ fn fast_atan2(y: f32, x: f32) -> f32 {
     // Polynomial approximation for atan(a) where 0 <= a <= 1
     // atan(a) ≈ a - a^3/3 + a^5/5 - ... (optimized polynomial)
     let s = a * a;
-    let r = ((-0.046_496_473 * s + 0.159_314_22) * s - 0.327_622_77) * s * a + a;
+    let r = ((-0.046_496_473f32)
+        .mul_add(s, 0.159_314_22)
+        .mul_add(s, -0.327_622_77)
+        * s)
+        .mul_add(a, a);
 
     // Map back to full circle
     let r = if abs_y > abs_x { 1.570_796_4 - r } else { r };
@@ -154,7 +158,7 @@ fn fast_magnitude(re: f32, im: f32) -> f32 {
     let abs_re = re.abs();
     let abs_im = im.abs();
     // Coefficients for minimum average error
-    0.960_433_87 * abs_re.max(abs_im) + 0.397_824_73 * abs_re.min(abs_im)
+    0.960_433_87f32.mul_add(abs_re.max(abs_im), 0.397_824_73 * abs_re.min(abs_im))
 }
 
 /// Fast approximate natural log for values near 1.0
@@ -165,7 +169,7 @@ fn fast_ln_near_one(x: f32) -> f32 {
     // For x near 1, ln(x) ≈ 2 * (x-1)/(x+1) * (1 + (x-1)^2/(3*(x+1)^2) + ...)
     // Simplified: ln(x) ≈ (x - 1) - (x - 1)^2 / 2 for x close to 1
     let d = x - 1.0;
-    d - 0.5 * d * d
+    (0.5 * d).mul_add(-d, d)
 }
 
 // =============================================================================
@@ -206,21 +210,21 @@ impl FormantExtractor {
 
     /// Set minimum formant frequency
     #[must_use]
-    pub fn with_min_freq(mut self, freq: f32) -> Self {
+    pub const fn with_min_freq(mut self, freq: f32) -> Self {
         self.min_freq = freq;
         self
     }
 
     /// Set maximum formant frequency
     #[must_use]
-    pub fn with_max_freq(mut self, freq: f32) -> Self {
+    pub const fn with_max_freq(mut self, freq: f32) -> Self {
         self.max_freq = freq;
         self
     }
 
     /// Set maximum bandwidth
     #[must_use]
-    pub fn with_max_bandwidth(mut self, bw: f32) -> Self {
+    pub const fn with_max_bandwidth(mut self, bw: f32) -> Self {
         self.max_bandwidth = bw;
         self
     }
@@ -353,8 +357,8 @@ impl FormantExtractor {
 
                 for k in 0..n {
                     // p = p * z + a[k]
-                    let next_re = p_re * z_re - p_im * z_im + coeffs[k];
-                    let next_im = p_re * z_im + p_im * z_re;
+                    let next_re = p_re.mul_add(z_re, -(p_im * z_im)) + coeffs[k];
+                    let next_im = p_re.mul_add(z_im, p_im * z_re);
                     p_re = next_re;
                     p_im = next_im;
                 }
@@ -368,19 +372,19 @@ impl FormantExtractor {
                         let diff_re = z_re - re[j];
                         let diff_im = z_im - im[j];
 
-                        let next_den_re = den_re * diff_re - den_im * diff_im;
-                        let next_den_im = den_re * diff_im + den_im * diff_re;
+                        let next_den_re = den_re.mul_add(diff_re, -(den_im * diff_im));
+                        let next_den_im = den_re.mul_add(diff_im, den_im * diff_re);
                         den_re = next_den_re;
                         den_im = next_den_im;
                     }
                 }
 
                 // Update: z -= P(z) / denominator
-                let norm = den_re * den_re + den_im * den_im;
+                let norm = den_re.mul_add(den_re, den_im * den_im);
                 if norm > 1e-15 {
                     let inv_norm = 1.0 / norm;
-                    let delta_re = (p_re * den_re + p_im * den_im) * inv_norm;
-                    let delta_im = (p_im * den_re - p_re * den_im) * inv_norm;
+                    let delta_re = p_re.mul_add(den_re, p_im * den_im) * inv_norm;
+                    let delta_im = p_im.mul_add(den_re, -(p_re * den_im)) * inv_norm;
 
                     re[i] -= delta_re;
                     im[i] -= delta_im;
@@ -438,8 +442,8 @@ impl FormantExtractor {
                 let mut p_im = 0.0f32;
 
                 for k in 0..order {
-                    let next_re = p_re * z_re - p_im * z_im + lpc.coeffs[k];
-                    let next_im = p_re * z_im + p_im * z_re;
+                    let next_re = p_re.mul_add(z_re, -(p_im * z_im)) + lpc.coeffs[k];
+                    let next_im = p_re.mul_add(z_im, p_im * z_re);
                     p_re = next_re;
                     p_im = next_im;
                 }
@@ -451,18 +455,18 @@ impl FormantExtractor {
                     if i != j {
                         let diff_re = z_re - re[j];
                         let diff_im = z_im - im[j];
-                        let next_den_re = den_re * diff_re - den_im * diff_im;
-                        let next_den_im = den_re * diff_im + den_im * diff_re;
+                        let next_den_re = den_re.mul_add(diff_re, -(den_im * diff_im));
+                        let next_den_im = den_re.mul_add(diff_im, den_im * diff_re);
                         den_re = next_den_re;
                         den_im = next_den_im;
                     }
                 }
 
-                let norm = den_re * den_re + den_im * den_im;
+                let norm = den_re.mul_add(den_re, den_im * den_im);
                 if norm > 1e-15 {
                     let inv_norm = 1.0 / norm;
-                    let delta_re = (p_re * den_re + p_im * den_im) * inv_norm;
-                    let delta_im = (p_im * den_re - p_re * den_im) * inv_norm;
+                    let delta_re = p_re.mul_add(den_re, p_im * den_im) * inv_norm;
+                    let delta_im = p_im.mul_add(den_re, -(p_re * den_im)) * inv_norm;
 
                     re[i] -= delta_re;
                     im[i] -= delta_im;
@@ -598,6 +602,7 @@ fn insertion_sort_formants(arr: &mut [Formant]) {
 // =============================================================================
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
@@ -666,7 +671,7 @@ mod tests {
         let re = 3.0;
         let im = 4.0;
         let fast = fast_magnitude(re, im);
-        let exact = (re * re + im * im).sqrt();
+        let exact = re.hypot(im);
 
         // Error should be < 5%
         assert!((fast - exact).abs() / exact < 0.05);

@@ -54,7 +54,7 @@ impl LpcCoefficients {
     }
 
     #[must_use]
-    pub fn order(&self) -> usize {
+    pub const fn order(&self) -> usize {
         self.coeffs.len()
     }
 
@@ -101,7 +101,7 @@ impl LpcCoefficientsView<'_> {
     }
 
     #[must_use]
-    pub fn order(&self) -> usize {
+    pub const fn order(&self) -> usize {
         self.coeffs.len()
     }
 }
@@ -185,8 +185,10 @@ impl LpcAnalyzer {
         // Pre-compute Hamming window
         let window: Vec<f32> = (0..frame_size)
             .map(|i| {
-                0.54 - 0.46
-                    * (2.0 * std::f32::consts::PI * i as f32 / (frame_size - 1) as f32).cos()
+                0.46f32.mul_add(
+                    -(2.0 * std::f32::consts::PI * i as f32 / (frame_size - 1) as f32).cos(),
+                    0.54,
+                )
             })
             .collect();
 
@@ -205,14 +207,14 @@ impl LpcAnalyzer {
 
     /// Set pre-emphasis coefficient
     #[must_use]
-    pub fn with_preemph(mut self, coeff: f32) -> Self {
+    pub const fn with_preemph(mut self, coeff: f32) -> Self {
         self.preemph = coeff;
         self
     }
 
     /// Get LPC order
     #[must_use]
-    pub fn order(&self) -> usize {
+    pub const fn order(&self) -> usize {
         self.order
     }
 
@@ -220,7 +222,12 @@ impl LpcAnalyzer {
     fn resize_buffers(&mut self, n: usize) {
         self.frame_size = n;
         self.window = (0..n)
-            .map(|i| 0.54 - 0.46 * (2.0 * std::f32::consts::PI * i as f32 / (n - 1) as f32).cos())
+            .map(|i| {
+                0.46f32.mul_add(
+                    -(2.0 * std::f32::consts::PI * i as f32 / (n - 1) as f32).cos(),
+                    0.54,
+                )
+            })
             .collect();
         self.ws_signal.resize(n, 0.0);
     }
@@ -583,7 +590,7 @@ pub mod lpc_fixed {
     #[inline(always)]
     #[cfg(target_arch = "aarch64")]
     #[must_use]
-    pub fn q16_mul(a: i32, b: i32) -> i32 {
+    pub const fn q16_mul(a: i32, b: i32) -> i32 {
         // On ARM64, compiles to SMULL + ASR
         ((a as i64 * b as i64) >> Q16_SHIFT) as i32
     }
@@ -599,7 +606,7 @@ pub mod lpc_fixed {
     #[inline(always)]
     #[cfg(target_arch = "aarch64")]
     #[must_use]
-    pub fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
+    pub const fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
         // On ARM64, compiles to SMLAL
         acc + ((a as i64 * b as i64) >> Q16_SHIFT) as i32
     }
@@ -753,7 +760,8 @@ mod tests {
         // Generate excitation
         let excitation: Vec<f32> = (0..512)
             .map(|i| {
-                ((i as u64).wrapping_mul(1103515245).wrapping_add(12345) % 100) as f32 / 50.0 - 1.0
+                ((i as u64).wrapping_mul(1_103_515_245).wrapping_add(12345) % 100) as f32 / 50.0
+                    - 1.0
             })
             .collect();
 

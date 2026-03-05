@@ -56,7 +56,7 @@ pub struct SpectralParams {
 
 impl SpectralParams {
     #[must_use]
-    pub fn new(frame_size: usize) -> Self {
+    pub const fn new(frame_size: usize) -> Self {
         Self {
             coefficients: Vec::new(),
             energy: 0.0,
@@ -68,14 +68,14 @@ impl SpectralParams {
     /// Get number of non-zero coefficients
     #[inline(always)]
     #[must_use]
-    pub fn sparsity(&self) -> usize {
+    pub const fn sparsity(&self) -> usize {
         self.coefficients.len()
     }
 
     /// Estimate encoded size in bytes
     #[inline(always)]
     #[must_use]
-    pub fn encoded_size(&self) -> usize {
+    pub const fn encoded_size(&self) -> usize {
         // 2 bytes index + 4 bytes value per coefficient
         4 + self.coefficients.len() * 6
     }
@@ -245,7 +245,7 @@ impl SpectralLayer {
         let n = self.frame_size;
         for i in 0..n {
             // Psychoacoustic: lower frequencies need more precision
-            let base = 1.0 + (i as f32 / n as f32) * 15.0;
+            let base = (i as f32 / n as f32).mul_add(15.0, 1.0);
             self.quant_matrix[i] = (base * scale / 100.0).max(0.1);
         }
     }
@@ -589,7 +589,7 @@ mod tests {
         let output = layer.idct(&dct);
 
         for (a, b) in input.iter().zip(output.iter()) {
-            assert!((a - b).abs() < 0.01, "DCT roundtrip failed: {} vs {}", a, b);
+            assert!((a - b).abs() < 0.01, "DCT roundtrip failed: {a} vs {b}");
         }
     }
 
@@ -603,7 +603,7 @@ mod tests {
             .collect();
 
         let params = layer.analyze(&samples).unwrap();
-        assert!(params.coefficients.len() > 0);
+        assert!(!params.coefficients.is_empty());
         assert!(params.energy > 0.0);
 
         let reconstructed = layer.synthesize(&params);
@@ -638,10 +638,10 @@ mod tests {
             .collect();
 
         let params_list = layer.analyze_stream(&samples).unwrap();
-        assert!(params_list.len() > 0);
+        assert!(!params_list.is_empty());
 
         let reconstructed = layer.synthesize_stream(&params_list);
-        assert!(reconstructed.len() > 0);
+        assert!(!reconstructed.is_empty());
     }
 
     #[test]

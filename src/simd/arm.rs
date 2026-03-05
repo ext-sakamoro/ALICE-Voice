@@ -21,14 +21,14 @@ use core::arch::aarch64::{
 /// Q16.16 multiply using 64-bit intermediate (scalar)
 #[inline(always)]
 #[must_use]
-pub fn q16_mul(a: i32, b: i32) -> i32 {
+pub const fn q16_mul(a: i32, b: i32) -> i32 {
     ((a as i64 * b as i64) >> Q16_SHIFT) as i32
 }
 
 /// Q16.16 multiply-accumulate (scalar)
 #[inline(always)]
 #[must_use]
-pub fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
+pub const fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
     acc + q16_mul(a, b)
 }
 
@@ -380,7 +380,7 @@ pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output
 /// Returns floor(sqrt(n)).
 #[inline]
 #[must_use]
-pub fn fast_isqrt_64(n: u64) -> u32 {
+pub const fn fast_isqrt_64(n: u64) -> u32 {
     if n == 0 {
         return 0;
     }
@@ -407,7 +407,7 @@ pub fn fast_isqrt_64(n: u64) -> u32 {
 /// Fast integer square root (32-bit)
 #[inline]
 #[must_use]
-pub fn fast_isqrt_32(n: u32) -> u16 {
+pub const fn fast_isqrt_32(n: u32) -> u16 {
     if n == 0 {
         return 0;
     }
@@ -437,9 +437,7 @@ mod tests {
         let expected = (10.0 * 65536.0) as i32;
         assert!(
             (result - expected).abs() < 2,
-            "q16_mul failed: {} vs {}",
-            result,
-            expected
+            "q16_mul failed: {result} vs {expected}"
         );
     }
 
@@ -498,17 +496,15 @@ mod tests {
 
     #[test]
     fn test_q16_dot_product() {
-        let a = [65536i32, 131072, 196608]; // 1.0, 2.0, 3.0 in Q16
-        let b = [65536i32, 65536, 65536]; // 1.0, 1.0, 1.0 in Q16
+        let a = [65_536_i32, 131_072, 196_608]; // 1.0, 2.0, 3.0 in Q16
+        let b = [65_536_i32, 65_536, 65_536]; // 1.0, 1.0, 1.0 in Q16
 
         let result = q16_dot_product_neon(&a, &b);
         // Expected: 1*1 + 2*1 + 3*1 = 6.0 in Q16 = 393216
         let expected = 6 * 65536i64;
         assert!(
             (result - expected).abs() < 10,
-            "dot product: {} vs {}",
-            result,
-            expected
+            "dot product: {result} vs {expected}"
         );
     }
 
@@ -526,7 +522,7 @@ mod tests {
 
         let sim = q16_cosine_similarity_neon(&a, &b);
         // Should be close to 1.0 (65536 in Q16)
-        assert!(sim > 50000, "similarity should be ~1.0: {}", sim);
+        assert!(sim > 50000, "similarity should be ~1.0: {sim}");
 
         // Test orthogonal vectors
         let mut c = [0i32; EMBEDDING_DIM];
@@ -537,8 +533,7 @@ mod tests {
         // Should be close to 0.0
         assert!(
             sim_ortho.abs() < 1000,
-            "orthogonal similarity should be ~0: {}",
-            sim_ortho
+            "orthogonal similarity should be ~0: {sim_ortho}"
         );
     }
 
@@ -547,14 +542,14 @@ mod tests {
         // Simple test: gain=1.0, no coefficients
         let coeffs: [i32; 0] = [];
         let gain = 65536; // 1.0
-        let excitation = [65536i32, 131072, 196608]; // 1.0, 2.0, 3.0
+        let excitation = [65_536_i32, 131_072, 196_608]; // 1.0, 2.0, 3.0
         let mut output = [0i32; 3];
 
         q16_lpc_filter_neon(&coeffs, gain, &excitation, &mut output);
 
         // With no coefficients, output should equal gain * excitation
         assert_eq!(output[0], 65536);
-        assert_eq!(output[1], 131072);
-        assert_eq!(output[2], 196608);
+        assert_eq!(output[1], 131_072);
+        assert_eq!(output[2], 196_608);
     }
 }

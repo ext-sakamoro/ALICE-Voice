@@ -72,7 +72,7 @@ impl PitchInfo {
     #[must_use]
     pub fn to_midi(&self) -> Option<f32> {
         if self.f0 > 0.0 {
-            Some(69.0 + 12.0 * (self.f0 / 440.0).log2())
+            Some(12.0f32.mul_add((self.f0 / 440.0).log2(), 69.0))
         } else {
             None
         }
@@ -139,7 +139,7 @@ impl PitchDetector {
 
     /// Set pitch range
     #[must_use]
-    pub fn with_pitch_range(mut self, min_f0: f32, max_f0: f32) -> Self {
+    pub const fn with_pitch_range(mut self, min_f0: f32, max_f0: f32) -> Self {
         self.min_f0 = min_f0;
         self.max_f0 = max_f0;
         self
@@ -147,14 +147,14 @@ impl PitchDetector {
 
     /// Set voicing threshold
     #[must_use]
-    pub fn with_voicing_threshold(mut self, threshold: f32) -> Self {
+    pub const fn with_voicing_threshold(mut self, threshold: f32) -> Self {
         self.voicing_threshold = threshold;
         self
     }
 
     /// Set detection algorithm
     #[must_use]
-    pub fn with_algorithm(mut self, algorithm: PitchAlgorithm) -> Self {
+    pub const fn with_algorithm(mut self, algorithm: PitchAlgorithm) -> Self {
         self.algorithm = algorithm;
         self
     }
@@ -239,7 +239,7 @@ impl PitchDetector {
             let y1 = self.ws_autocorr[best_lag];
             let y2 = self.ws_autocorr[best_lag + 1];
 
-            let denom = y0 - 2.0 * y1 + y2;
+            let denom = 2.0f32.mul_add(-y1, y0) + y2;
             if denom.abs() > 1e-10 {
                 best_lag as f32 + (y0 - y2) / (2.0 * denom)
             } else {
@@ -351,7 +351,7 @@ impl PitchDetector {
             let y1 = self.ws_yin_d_prime[best_tau];
             let y2 = self.ws_yin_d_prime[best_tau + 1];
 
-            let denom = y0 - 2.0 * y1 + y2;
+            let denom = 2.0f32.mul_add(-y1, y0) + y2;
             if denom.abs() > 1e-10 {
                 best_tau as f32 + (y0 - y2) / (2.0 * denom)
             } else {
@@ -526,16 +526,16 @@ pub fn generate_excitation_into(pitch_info: &PitchInfo, output: &mut [f32], _sam
 
         while i < unroll_end {
             seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
-            output[i] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
+            output[i] = (seed as f32 / u32::MAX as f32).mul_add(2.0, -1.0);
 
             seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
-            output[i + 1] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
+            output[i + 1] = (seed as f32 / u32::MAX as f32).mul_add(2.0, -1.0);
 
             seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
-            output[i + 2] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
+            output[i + 2] = (seed as f32 / u32::MAX as f32).mul_add(2.0, -1.0);
 
             seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
-            output[i + 3] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
+            output[i + 3] = (seed as f32 / u32::MAX as f32).mul_add(2.0, -1.0);
 
             i += 4;
         }
@@ -543,13 +543,14 @@ pub fn generate_excitation_into(pitch_info: &PitchInfo, output: &mut [f32], _sam
         // Handle remaining elements
         while i < length {
             seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
-            output[i] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
+            output[i] = (seed as f32 / u32::MAX as f32).mul_add(2.0, -1.0);
             i += 1;
         }
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
 
