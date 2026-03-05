@@ -99,6 +99,7 @@ pub enum VoiceQuality {
 
 impl VoiceQuality {
     /// Get recommended sample rate for quality level
+    #[must_use]
     pub fn sample_rate(&self) -> u32 {
         match self {
             VoiceQuality::Low => 8000,
@@ -109,6 +110,7 @@ impl VoiceQuality {
     }
 
     /// Get recommended LPC order for quality level
+    #[must_use]
     pub fn lpc_order(&self) -> usize {
         match self {
             VoiceQuality::Low => 8,
@@ -211,6 +213,7 @@ pub struct VoiceFrameHeader {
 }
 
 impl VoiceFrameHeader {
+    #[must_use]
     pub fn new(
         layer_type: VoiceLayerType,
         packet_type: VoicePacketType,
@@ -229,6 +232,11 @@ impl VoiceFrameHeader {
         }
     }
 
+    /// Validate packet header magic bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError::InvalidMagic` if the magic bytes are incorrect.
     pub fn validate(&self) -> VoiceResult<()> {
         if self.magic != [0x41, 0x56, 0x4F, 0x31] {
             return Err(VoiceError::InvalidMagic);
@@ -264,6 +272,7 @@ impl Default for SpeakerEmbedding {
 impl SpeakerEmbedding {
     /// Create from fixed-size array (zero-copy)
     #[inline]
+    #[must_use]
     pub fn from_array(vector: [f32; EMBEDDING_DIM]) -> Self {
         Self {
             vector,
@@ -272,7 +281,8 @@ impl SpeakerEmbedding {
     }
 
     /// Create from slice (copies into fixed array)
-    pub fn new(vector: Vec<f32>) -> Self {
+    #[must_use]
+    pub fn new(vector: &[f32]) -> Self {
         let mut arr = [0.0f32; EMBEDDING_DIM];
         let len = vector.len().min(EMBEDDING_DIM);
         arr[..len].copy_from_slice(&vector[..len]);
@@ -284,6 +294,7 @@ impl SpeakerEmbedding {
 
     /// Create from slice reference (copies into fixed array)
     #[inline]
+    #[must_use]
     pub fn from_slice(slice: &[f32]) -> Self {
         let mut arr = [0.0f32; EMBEDDING_DIM];
         let len = slice.len().min(EMBEDDING_DIM);
@@ -295,6 +306,7 @@ impl SpeakerEmbedding {
     }
 
     /// Set name via hash (FNV-1a for speed)
+    #[must_use]
     pub fn with_name(mut self, name: impl AsRef<str>) -> Self {
         self.name_hash = fnv1a_hash(name.as_ref().as_bytes());
         self
@@ -305,6 +317,7 @@ impl SpeakerEmbedding {
     /// Uses 4x loop unrolling + FMA for SIMD auto-vectorization
     /// and fast inverse sqrt for ~3x speedup over naive implementation.
     #[inline]
+    #[must_use]
     pub fn similarity(&self, other: &SpeakerEmbedding) -> f32 {
         self.similarity_simd(other)
     }
@@ -312,13 +325,13 @@ impl SpeakerEmbedding {
     /// SIMD-optimized cosine similarity with 4x unrolling
     #[inline(always)]
     fn similarity_simd(&self, other: &SpeakerEmbedding) -> f32 {
-        let mut dot = 0.0f32;
-        let mut norm_a = 0.0f32;
-        let mut norm_b = 0.0f32;
-
         // 4x unrolling for SIMD auto-vectorization
         // EMBEDDING_DIM = 256 = 64 * 4, perfectly divisible
         const CHUNKS: usize = EMBEDDING_DIM / 4;
+
+        let mut dot = 0.0f32;
+        let mut norm_a = 0.0f32;
+        let mut norm_b = 0.0f32;
 
         for i in 0..CHUNKS {
             let idx = i * 4;
@@ -365,8 +378,8 @@ impl SpeakerEmbedding {
 /// FNV-1a hash for speaker name (fast, non-cryptographic)
 #[inline]
 fn fnv1a_hash(bytes: &[u8]) -> u64 {
-    const FNV_OFFSET: u64 = 0xcbf29ce484222325;
-    const FNV_PRIME: u64 = 0x100000001b3;
+    const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const FNV_PRIME: u64 = 0x0001_0000_0001_00b3;
 
     let mut hash = FNV_OFFSET;
     for &byte in bytes {
@@ -380,10 +393,11 @@ fn fnv1a_hash(bytes: &[u8]) -> u64 {
 ///
 /// Error: < 0.2% for typical embedding magnitudes
 #[inline(always)]
+#[must_use]
 pub fn fast_inv_sqrt(x: f32) -> f32 {
     let half = 0.5 * x;
     let i = x.to_bits();
-    let i = 0x5f375a86 - (i >> 1); // Magic constant
+    let i = 0x5f37_5a86 - (i >> 1); // Magic constant
     let y = f32::from_bits(i);
     // One Newton-Raphson iteration for better accuracy
     y * (1.5 - half * y * y)
@@ -416,36 +430,42 @@ impl Default for VoiceActivity {
 
 /// Convert Q16.16 fixed-point to integer (truncate)
 #[inline(always)]
+#[must_use]
 pub const fn q16_to_int(q: i32) -> i32 {
     q >> Q16_SHIFT
 }
 
 /// Convert integer to Q16.16 fixed-point
 #[inline(always)]
+#[must_use]
 pub const fn int_to_q16(i: i32) -> i32 {
     i << Q16_SHIFT
 }
 
 /// Convert Q16.16 to f32
 #[inline(always)]
+#[must_use]
 pub fn q16_to_f32(q: i32) -> f32 {
     q as f32 / Q16_ONE as f32
 }
 
 /// Convert f32 to Q16.16
 #[inline(always)]
+#[must_use]
 pub fn f32_to_q16(f: f32) -> i32 {
     (f * Q16_ONE as f32) as i32
 }
 
 /// Q16.16 multiply
 #[inline(always)]
+#[must_use]
 pub fn q16_mul(a: i32, b: i32) -> i32 {
     ((a as i64 * b as i64) >> Q16_SHIFT) as i32
 }
 
 /// Q16.16 divide
 #[inline(always)]
+#[must_use]
 pub fn q16_div(a: i32, b: i32) -> i32 {
     if b == 0 {
         return 0;
@@ -483,9 +503,9 @@ mod tests {
     #[test]
     fn test_speaker_similarity() {
         // Create embeddings with first 3 elements set
-        let speaker1 = SpeakerEmbedding::new(vec![1.0, 0.0, 0.0]);
-        let speaker2 = SpeakerEmbedding::new(vec![1.0, 0.0, 0.0]);
-        let speaker3 = SpeakerEmbedding::new(vec![0.0, 1.0, 0.0]);
+        let speaker1 = SpeakerEmbedding::new(&[1.0, 0.0, 0.0]);
+        let speaker2 = SpeakerEmbedding::new(&[1.0, 0.0, 0.0]);
+        let speaker3 = SpeakerEmbedding::new(&[0.0, 1.0, 0.0]);
 
         // Relaxed tolerance for fast_inv_sqrt (< 0.5% error)
         assert!((speaker1.similarity(&speaker2) - 1.0).abs() < 0.01);

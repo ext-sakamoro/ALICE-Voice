@@ -8,8 +8,8 @@
 //! |--------|---------|----------------|
 //! | aarch64 | NEON | `arm::neon` |
 //! | arm | NEON | `arm::neon` |
-//! | x86_64 | AVX2 | Future |
-//! | x86_64 | SSE4.1 | Future |
+//! | `x86_64` | AVX2 | Future |
+//! | `x86_64` | SSE4.1 | Future |
 //!
 //! # Usage
 //!
@@ -33,6 +33,7 @@ pub use scalar::*;
 /// Check if NEON is available at runtime (aarch64)
 #[cfg(target_arch = "aarch64")]
 #[inline]
+#[must_use]
 pub fn has_neon() -> bool {
     // NEON is always available on aarch64
     true

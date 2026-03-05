@@ -41,6 +41,7 @@ impl Default for PitchInfo {
 
 impl PitchInfo {
     /// Create new pitch info for voiced frame
+    #[must_use]
     pub fn voiced(f0: f32, confidence: f32, sample_rate: u32) -> Self {
         Self {
             f0,
@@ -52,11 +53,13 @@ impl PitchInfo {
     }
 
     /// Create pitch info for unvoiced frame
+    #[must_use]
     pub fn unvoiced() -> Self {
         Self::default()
     }
 
     /// Get pitch period in milliseconds
+    #[must_use]
     pub fn period_ms(&self, _sample_rate: u32) -> f32 {
         if self.f0 > 0.0 {
             1000.0 / self.f0
@@ -66,6 +69,7 @@ impl PitchInfo {
     }
 
     /// Convert to MIDI note number (A4 = 69)
+    #[must_use]
     pub fn to_midi(&self) -> Option<f32> {
         if self.f0 > 0.0 {
             Some(69.0 + 12.0 * (self.f0 / 440.0).log2())
@@ -116,6 +120,7 @@ impl PitchDetector {
     /// Create new pitch detector with default settings
     ///
     /// Pre-allocates workspace buffers for zero-allocation detection.
+    #[must_use]
     pub fn new(sample_rate: u32) -> Self {
         let max_period = (sample_rate as f32 / 50.0) as usize + 1; // 50 Hz min
 
@@ -133,6 +138,7 @@ impl PitchDetector {
     }
 
     /// Set pitch range
+    #[must_use]
     pub fn with_pitch_range(mut self, min_f0: f32, max_f0: f32) -> Self {
         self.min_f0 = min_f0;
         self.max_f0 = max_f0;
@@ -140,12 +146,14 @@ impl PitchDetector {
     }
 
     /// Set voicing threshold
+    #[must_use]
     pub fn with_voicing_threshold(mut self, threshold: f32) -> Self {
         self.voicing_threshold = threshold;
         self
     }
 
     /// Set detection algorithm
+    #[must_use]
     pub fn with_algorithm(mut self, algorithm: PitchAlgorithm) -> Self {
         self.algorithm = algorithm;
         self
@@ -161,6 +169,10 @@ impl PitchDetector {
     /// Detect pitch in audio frame
     ///
     /// Uses pre-allocated buffers for zero-allocation pitch detection.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if pitch detection fails.
     pub fn detect(&mut self, samples: &[f32]) -> VoiceResult<PitchInfo> {
         match self.algorithm {
             PitchAlgorithm::Autocorrelation => self.detect_autocorrelation(samples),
@@ -171,7 +183,7 @@ impl PitchDetector {
 
     /// Autocorrelation-based pitch detection
     ///
-    /// Level 1: Uses pre-allocated ws_autocorr buffer
+    /// Level 1: Uses pre-allocated `ws_autocorr` buffer
     /// Level 2: SIMD-friendly zip pattern for autocorrelation
     fn detect_autocorrelation(&mut self, samples: &[f32]) -> VoiceResult<PitchInfo> {
         let (min_period, max_period) = self.get_period_range();
@@ -256,7 +268,7 @@ impl PitchDetector {
 
     /// YIN pitch detection algorithm
     ///
-    /// Level 1: Uses pre-allocated ws_yin_d, ws_yin_d_prime buffers
+    /// Level 1: Uses pre-allocated `ws_yin_d`, `ws_yin_d_prime` buffers
     /// Level 2: SIMD-friendly zip pattern for difference function
     fn detect_yin(&mut self, samples: &[f32]) -> VoiceResult<PitchInfo> {
         let (min_period, max_period) = self.get_period_range();
@@ -369,7 +381,7 @@ impl PitchDetector {
 
     /// AMDF-based pitch detection
     ///
-    /// Level 1: Uses pre-allocated ws_amdf buffer
+    /// Level 1: Uses pre-allocated `ws_amdf` buffer
     /// Level 2: SIMD-friendly zip pattern for AMDF
     fn detect_amdf(&mut self, samples: &[f32]) -> VoiceResult<PitchInfo> {
         let (min_period, max_period) = self.get_period_range();
@@ -434,6 +446,7 @@ impl PitchDetector {
     }
 
     /// Detect voice activity
+    #[must_use]
     pub fn detect_voice_activity(&self, samples: &[f32]) -> VoiceActivity {
         // Compute energy
         let energy: f32 = samples.iter().map(|&s| s * s).sum::<f32>() / samples.len() as f32;
@@ -468,6 +481,7 @@ impl PitchDetector {
 }
 
 /// Generate excitation signal for LPC synthesis (allocating)
+#[must_use]
 pub fn generate_excitation(pitch_info: &PitchInfo, length: usize, sample_rate: u32) -> Vec<f32> {
     let mut excitation = vec![0.0; length];
     generate_excitation_into(pitch_info, &mut excitation, sample_rate);
@@ -511,16 +525,16 @@ pub fn generate_excitation_into(pitch_info: &PitchInfo, output: &mut [f32], _sam
         let mut i = 0;
 
         while i < unroll_end {
-            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
             output[i] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
 
-            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
             output[i + 1] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
 
-            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
             output[i + 2] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
 
-            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
             output[i + 3] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
 
             i += 4;
@@ -528,7 +542,7 @@ pub fn generate_excitation_into(pitch_info: &PitchInfo, output: &mut [f32], _sam
 
         // Handle remaining elements
         while i < length {
-            seed = seed.wrapping_mul(1103515245).wrapping_add(12345);
+            seed = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
             output[i] = (seed as f32 / u32::MAX as f32) * 2.0 - 1.0;
             i += 1;
         }

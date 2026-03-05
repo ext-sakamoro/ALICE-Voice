@@ -55,6 +55,7 @@ pub struct SpectralParams {
 }
 
 impl SpectralParams {
+    #[must_use]
     pub fn new(frame_size: usize) -> Self {
         Self {
             coefficients: Vec::new(),
@@ -66,12 +67,14 @@ impl SpectralParams {
 
     /// Get number of non-zero coefficients
     #[inline(always)]
+    #[must_use]
     pub fn sparsity(&self) -> usize {
         self.coefficients.len()
     }
 
     /// Estimate encoded size in bytes
     #[inline(always)]
+    #[must_use]
     pub fn encoded_size(&self) -> usize {
         // 2 bytes index + 4 bytes value per coefficient
         4 + self.coefficients.len() * 6
@@ -124,6 +127,11 @@ impl SpectralLayer {
     /// Create new spectral layer with specified frame and hop size
     ///
     /// Performs all heavy initialization (DCT matrix computation) here.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `frame_size` exceeds `MAX_FRAME_SIZE`.
+    #[must_use]
     pub fn new(frame_size: usize, hop_size: usize) -> Self {
         assert!(frame_size <= MAX_FRAME_SIZE, "Frame size exceeds maximum");
 
@@ -154,11 +162,13 @@ impl SpectralLayer {
     }
 
     /// Create with default settings
+    #[must_use]
     pub fn default_config() -> Self {
         Self::new(DEFAULT_FRAME_SIZE, DEFAULT_HOP_SIZE)
     }
 
     /// Set quality level
+    #[must_use]
     pub fn with_quality(mut self, quality: VoiceQuality) -> Self {
         self.quality = quality;
         let q = match quality {
@@ -246,7 +256,7 @@ impl SpectralLayer {
 
     /// Fast DCT using pre-computed matrix (SGEMV)
     ///
-    /// Computes: ws_output = dct_matrix × ws_input
+    /// Computes: `ws_output` = `dct_matrix` × `ws_input`
     /// Uses 4x loop unrolling for SIMD auto-vectorization.
     #[inline(always)]
     fn dct_inplace(&mut self) {
@@ -283,7 +293,7 @@ impl SpectralLayer {
 
     /// Fast IDCT using pre-computed matrix (SGEMV)
     ///
-    /// Computes: ws_output = idct_matrix × ws_input
+    /// Computes: `ws_output` = `idct_matrix` × `ws_input`
     #[inline(always)]
     fn idct_inplace(&mut self) {
         let n = self.frame_size;
@@ -318,7 +328,7 @@ impl SpectralLayer {
 
     /// Quantize coefficients inplace
     ///
-    /// ws_quantized[i] = round(ws_output[i] / quant_matrix[i])
+    /// `ws_quantized`[i] = `round(ws_output`[i] / `quant_matrix`[i])
     /// Uses reciprocal multiplication to eliminate repeated float division.
     #[inline(always)]
     fn quantize_inplace(&mut self) {
@@ -332,7 +342,7 @@ impl SpectralLayer {
 
     /// Dequantize coefficients inplace
     ///
-    /// ws_input[i] = ws_quantized[i] * quant_matrix[i]
+    /// `ws_input`[i] = `ws_quantized`[i] * `quant_matrix`[i]
     #[inline(always)]
     fn dequantize_inplace(&mut self) {
         let n = self.frame_size;
@@ -349,6 +359,10 @@ impl SpectralLayer {
     /// Analyze audio frame and extract spectral parameters
     ///
     /// Uses pre-allocated workspace buffers internally.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError::BufferTooSmall` if the input is shorter than `frame_size`.
     pub fn analyze(&mut self, samples: &[f32]) -> VoiceResult<SpectralParams> {
         if samples.len() < self.frame_size {
             return Err(crate::types::VoiceError::BufferTooSmall {
@@ -458,6 +472,10 @@ impl SpectralLayer {
     }
 
     /// Process multiple frames with overlap-add
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if any frame analysis fails.
     pub fn analyze_stream(&mut self, samples: &[f32]) -> VoiceResult<Vec<SpectralParams>> {
         let mut params_list = Vec::new();
         let mut pos = 0;

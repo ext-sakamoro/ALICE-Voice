@@ -16,6 +16,7 @@ crate-type = ["cdylib", "rlib"]
 [features]
 default = ["std", "python"]
 std = []
+ffi = ["std"]     # C/C++/C# FFI bindings
 python = ["pyo3", "numpy"]
 ml = ["dep:alice-ml"]   # ALICE-ML ternary inference for voice parameters
 codec = ["dep:alice-codec"]  # ALICE-Codec wavelet + rANS for parameter compression

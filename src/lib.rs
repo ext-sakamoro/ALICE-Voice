@@ -37,11 +37,28 @@
 //! - [ALICE-Streaming-Protocol](https://github.com/ext-sakamoro/ALICE-Streaming-Protocol) - Video streaming
 //! - [ALICE-Zip](https://github.com/ext-sakamoro/ALICE-Zip) - Procedural compression
 
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
+    clippy::similar_names,
+    clippy::many_single_char_names,
+    clippy::module_name_repetitions,
+    clippy::inline_always,
+    clippy::too_many_lines,
+    clippy::useless_conversion
+)]
+
 pub mod api;
 pub mod codec;
 pub mod layers;
 pub mod simd;
 pub mod types;
+
+#[cfg(feature = "ffi")]
+pub mod ffi;
 
 #[cfg(feature = "python")]
 pub mod python;

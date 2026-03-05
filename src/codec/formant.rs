@@ -5,7 +5,7 @@
 //! Tunings:
 //! - Zero Heap Allocation (Uses stack buffers for roots)
 //! - Fast Approx Math (atan2, sqrt)
-//! - SoA (Structure of Arrays) layout for SIMD auto-vectorization
+//! - `SoA` (Structure of Arrays) layout for SIMD auto-vectorization
 //! - Insertion Sort for small arrays
 //!
 //! # Performance
@@ -49,6 +49,7 @@ pub struct Formant {
 }
 
 impl Formant {
+    #[must_use]
     pub fn new(frequency: f32, bandwidth: f32) -> Self {
         Self {
             frequency,
@@ -57,6 +58,7 @@ impl Formant {
         }
     }
 
+    #[must_use]
     pub fn with_amplitude(mut self, amplitude: f32) -> Self {
         self.amplitude = amplitude;
         self
@@ -73,6 +75,7 @@ pub struct FormantResult {
 }
 
 impl FormantResult {
+    #[must_use]
     pub fn new(sample_rate: u32) -> Self {
         Self {
             formants: Vec::new(),
@@ -81,21 +84,25 @@ impl FormantResult {
     }
 
     /// Get formant by index (0 = F1, 1 = F2, etc.)
+    #[must_use]
     pub fn get(&self, index: usize) -> Option<&Formant> {
         self.formants.get(index)
     }
 
     /// Get F1 (first formant)
+    #[must_use]
     pub fn f1(&self) -> Option<&Formant> {
         self.get(0)
     }
 
     /// Get F2 (second formant)
+    #[must_use]
     pub fn f2(&self) -> Option<&Formant> {
         self.get(1)
     }
 
     /// Get F3 (third formant)
+    #[must_use]
     pub fn f3(&self) -> Option<&Formant> {
         self.get(2)
     }
@@ -124,7 +131,7 @@ fn fast_atan2(y: f32, x: f32) -> f32 {
     // Polynomial approximation for atan(a) where 0 <= a <= 1
     // atan(a) ≈ a - a^3/3 + a^5/5 - ... (optimized polynomial)
     let s = a * a;
-    let r = ((-0.046_496_473 * s + 0.15931422) * s - 0.327_622_77) * s * a + a;
+    let r = ((-0.046_496_473 * s + 0.159_314_22) * s - 0.327_622_77) * s * a + a;
 
     // Map back to full circle
     let r = if abs_y > abs_x { 1.570_796_4 - r } else { r };
@@ -147,7 +154,7 @@ fn fast_magnitude(re: f32, im: f32) -> f32 {
     let abs_re = re.abs();
     let abs_im = im.abs();
     // Coefficients for minimum average error
-    0.96043387 * abs_re.max(abs_im) + 0.39782473 * abs_re.min(abs_im)
+    0.960_433_87 * abs_re.max(abs_im) + 0.397_824_73 * abs_re.min(abs_im)
 }
 
 /// Fast approximate natural log for values near 1.0
@@ -171,7 +178,7 @@ fn fast_ln_near_one(x: f32) -> f32 {
 ///
 /// - **Zero-allocation hot path**: All root finding uses stack arrays
 /// - **Fast math**: Approximate atan2 and magnitude
-/// - **SoA layout**: Separate re[] and im[] arrays for SIMD
+/// - **`SoA` layout**: Separate re[] and im[] arrays for SIMD
 /// - **Insertion sort**: Inline-friendly for small arrays
 #[derive(Debug, Clone)]
 pub struct FormantExtractor {
@@ -187,6 +194,7 @@ pub struct FormantExtractor {
 
 impl FormantExtractor {
     /// Create new formant extractor
+    #[must_use]
     pub fn new(sample_rate: u32) -> Self {
         Self {
             sample_rate,
@@ -197,18 +205,21 @@ impl FormantExtractor {
     }
 
     /// Set minimum formant frequency
+    #[must_use]
     pub fn with_min_freq(mut self, freq: f32) -> Self {
         self.min_freq = freq;
         self
     }
 
     /// Set maximum formant frequency
+    #[must_use]
     pub fn with_max_freq(mut self, freq: f32) -> Self {
         self.max_freq = freq;
         self
     }
 
     /// Set maximum bandwidth
+    #[must_use]
     pub fn with_max_bandwidth(mut self, bw: f32) -> Self {
         self.max_bandwidth = bw;
         self
@@ -220,6 +231,10 @@ impl FormantExtractor {
     ///
     /// The root finding algorithm runs entirely on the stack.
     /// Only the final output Vec allocation occurs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if LPC order is zero or extraction fails.
     pub fn extract(&self, lpc: &LpcCoefficients) -> VoiceResult<FormantResult> {
         let order = lpc.order();
 
@@ -294,15 +309,16 @@ impl FormantExtractor {
         })
     }
 
-    /// Durand-Kerner root finder using SoA (Structure of Arrays) on stack
+    /// Durand-Kerner root finder using `SoA` (Structure of Arrays) on stack
     ///
-    /// Returns (re_array, im_array, count)
+    /// Returns (`re_array`, `im_array`, count)
     ///
     /// # Algorithm
     ///
     /// Solves the LPC polynomial: z^n + a[0]z^(n-1) + ... + a[n-1] = 0
     /// using Durand-Kerner iteration with initial roots on unit circle.
     #[inline]
+    #[allow(clippy::unused_self)] // method logically belongs to the extractor
     fn find_roots_fast(
         &self,
         coeffs: &[f32],
@@ -386,7 +402,12 @@ impl FormantExtractor {
         (re, im, n)
     }
 
-    /// Fallback extraction for LPC orders > MAX_LPC_ORDER (rare)
+    /// Fallback extraction for LPC orders > `MAX_LPC_ORDER` (rare)
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if extraction fails.
+    #[allow(clippy::unnecessary_wraps)] // keeps consistent API with extract()
     fn extract_fallback(&self, lpc: &LpcCoefficients) -> VoiceResult<FormantResult> {
         let order = lpc.order();
         if order == 0 {
@@ -504,6 +525,7 @@ impl FormantExtractor {
     }
 
     /// Synthesize LPC coefficients from formants (inverse operation)
+    #[must_use]
     pub fn synthesize_lpc(&self, formants: &[Formant], order: usize) -> LpcCoefficients {
         let mut poles_re = [0.0f32; MAX_LPC_ORDER];
         let mut poles_im = [0.0f32; MAX_LPC_ORDER];
@@ -546,7 +568,7 @@ impl FormantExtractor {
         }
 
         let n = order.min(poly.len() - 1);
-        coeffs[..n].copy_from_slice(&poly[1..n + 1]);
+        coeffs[..n].copy_from_slice(&poly[1..=n]);
 
         LpcCoefficients {
             coeffs,

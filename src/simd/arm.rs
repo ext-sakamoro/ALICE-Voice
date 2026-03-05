@@ -9,7 +9,10 @@
 use crate::types::{EMBEDDING_DIM, Q16_SHIFT};
 
 #[cfg(target_arch = "aarch64")]
-use core::arch::aarch64::*;
+use core::arch::aarch64::{
+    vaddq_s64, vcombine_s32, vdupq_n_s64, vget_high_s32, vget_low_s32, vgetq_lane_s64, vld1q_s32,
+    vmlal_s32, vmull_s32, vshrn_n_s64, vst1q_s32,
+};
 
 // ============================================
 // Q16.16 Fixed-Point Operations (Scalar)
@@ -17,12 +20,14 @@ use core::arch::aarch64::*;
 
 /// Q16.16 multiply using 64-bit intermediate (scalar)
 #[inline(always)]
+#[must_use]
 pub fn q16_mul(a: i32, b: i32) -> i32 {
     ((a as i64 * b as i64) >> Q16_SHIFT) as i32
 }
 
 /// Q16.16 multiply-accumulate (scalar)
 #[inline(always)]
+#[must_use]
 pub fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
     acc + q16_mul(a, b)
 }
@@ -33,6 +38,7 @@ pub fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
 /// Caller must ensure `target_feature = "neon"` is available on the current CPU.
 #[cfg(target_arch = "aarch64")]
 #[inline(always)]
+#[must_use]
 pub unsafe fn q16_mul_4x_neon(a: &[i32; 4], b: &[i32; 4]) -> [i32; 4] {
     let va = vld1q_s32(a.as_ptr());
     let vb = vld1q_s32(b.as_ptr());
@@ -75,6 +81,7 @@ pub fn q16_mul_4x_neon(a: &[i32; 4], b: &[i32; 4]) -> [i32; 4] {
 /// Processing 16 elements per iteration allows the CPU to overlap
 /// load and multiply-add operations, maximizing throughput.
 #[cfg(target_arch = "aarch64")]
+#[must_use]
 pub fn q16_dot_product_neon(a: &[i32], b: &[i32]) -> i64 {
     let len = a.len().min(b.len());
     let mut ptr_a = a.as_ptr();
@@ -154,6 +161,7 @@ pub fn q16_dot_product_neon(a: &[i32], b: &[i32]) -> i64 {
 // ============================================
 
 #[cfg(target_arch = "aarch64")]
+#[must_use]
 pub fn q16_cosine_similarity_neon(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_DIM]) -> i32 {
     unsafe {
         // 3 sets of accumulators, 8-way unrolled (32 iterations for 256 dim)
@@ -371,6 +379,7 @@ pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output
 /// Uses Newton-Raphson with a good initial guess.
 /// Returns floor(sqrt(n)).
 #[inline]
+#[must_use]
 pub fn fast_isqrt_64(n: u64) -> u32 {
     if n == 0 {
         return 0;
@@ -397,6 +406,7 @@ pub fn fast_isqrt_64(n: u64) -> u32 {
 
 /// Fast integer square root (32-bit)
 #[inline]
+#[must_use]
 pub fn fast_isqrt_32(n: u32) -> u16 {
     if n == 0 {
         return 0;

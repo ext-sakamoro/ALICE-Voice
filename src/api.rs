@@ -47,6 +47,7 @@ impl Default for VoiceCodecConfig {
 
 impl VoiceCodecConfig {
     /// Create config for specific quality level
+    #[must_use]
     pub fn for_quality(quality: VoiceQuality) -> Self {
         let sample_rate = quality.sample_rate();
         let lpc_order = quality.lpc_order();
@@ -64,21 +65,25 @@ impl VoiceCodecConfig {
     }
 
     /// Create config for narrowband (8kHz)
+    #[must_use]
     pub fn narrowband() -> Self {
         Self::for_quality(VoiceQuality::Low)
     }
 
     /// Create config for wideband (16kHz)
+    #[must_use]
     pub fn wideband() -> Self {
         Self::for_quality(VoiceQuality::Medium)
     }
 
     /// Create config for super-wideband (32kHz)
+    #[must_use]
     pub fn super_wideband() -> Self {
         Self::for_quality(VoiceQuality::High)
     }
 
     /// Create config for fullband (48kHz)
+    #[must_use]
     pub fn fullband() -> Self {
         Self::for_quality(VoiceQuality::Ultra)
     }
@@ -100,6 +105,7 @@ pub struct VoiceCodec {
 
 impl VoiceCodec {
     /// Create new voice codec with configuration
+    #[must_use]
     pub fn new(config: VoiceCodecConfig) -> Self {
         Self {
             spectral: SpectralLayer::new(config.frame_size, config.hop_size)
@@ -115,11 +121,13 @@ impl VoiceCodec {
     }
 
     /// Create with default configuration
+    #[must_use]
     pub fn default_config() -> Self {
         Self::new(VoiceCodecConfig::default())
     }
 
     /// Get configuration
+    #[must_use]
     pub fn config(&self) -> &VoiceCodecConfig {
         &self.config
     }
@@ -129,6 +137,10 @@ impl VoiceCodec {
     // ============================================
 
     /// Encode to L1 (Spectral)
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if spectral analysis fails.
     pub fn encode_spectral(&mut self, samples: &[f32]) -> VoiceResult<Vec<SpectralParams>> {
         self.spectral.analyze_stream(samples)
     }
@@ -143,12 +155,17 @@ impl VoiceCodec {
     // ============================================
 
     /// Encode to L2 (Parametric)
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if parametric analysis fails.
     pub fn encode_parametric(&mut self, samples: &[f32]) -> VoiceResult<Vec<ParametricParams>> {
         self.parametric
             .analyze_stream(samples, self.config.hop_size)
     }
 
     /// Decode from L2 (Parametric)
+    #[must_use]
     pub fn decode_parametric(&self, params: &[ParametricParams]) -> Vec<f32> {
         self.parametric
             .synthesize_stream(params, self.config.hop_size)
@@ -159,20 +176,28 @@ impl VoiceCodec {
     // ============================================
 
     /// Calculate compression ratio for L1
+    #[must_use]
     pub fn compression_ratio_spectral(&self, samples: &[f32], params: &[SpectralParams]) -> f32 {
         let original_size = samples.len() * 4;
-        let compressed_size: usize = params.iter().map(|p| p.encoded_size()).sum();
+        let compressed_size: usize = params
+            .iter()
+            .map(super::layers::spectral::SpectralParams::encoded_size)
+            .sum();
         original_size as f32 / compressed_size as f32
     }
 
     /// Calculate compression ratio for L2
+    #[must_use]
     pub fn compression_ratio_parametric(
         &self,
         samples: &[f32],
         params: &[ParametricParams],
     ) -> f32 {
         let original_size = samples.len() * 4;
-        let compressed_size: usize = params.iter().map(|p| p.encoded_size()).sum();
+        let compressed_size: usize = params
+            .iter()
+            .map(super::layers::parametric::ParametricParams::encoded_size)
+            .sum();
         original_size as f32 / compressed_size as f32
     }
 }
@@ -200,6 +225,7 @@ pub struct EncodingStats {
 
 impl EncodingStats {
     /// Compute statistics from parametric params
+    #[must_use]
     pub fn from_parametric(params: &[ParametricParams], original_samples: usize) -> Self {
         if params.is_empty() {
             return Self::default();
@@ -239,7 +265,10 @@ impl EncodingStats {
         stats.avg_energy = energy_sum / params.len() as f32;
 
         let original_size = original_samples * 4;
-        let compressed_size: usize = params.iter().map(|p| p.encoded_size()).sum();
+        let compressed_size: usize = params
+            .iter()
+            .map(super::layers::parametric::ParametricParams::encoded_size)
+            .sum();
         stats.compression_ratio = original_size as f32 / compressed_size as f32;
 
         stats

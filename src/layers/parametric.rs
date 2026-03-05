@@ -62,6 +62,7 @@ pub struct ParametricParams {
 }
 
 impl ParametricParams {
+    #[must_use]
     pub fn new(lpc_order: usize, frame_size: usize, sample_rate: u32) -> Self {
         Self {
             lpc: LpcCoefficients::new(lpc_order),
@@ -74,6 +75,7 @@ impl ParametricParams {
     }
 
     /// Estimate encoded size in bytes
+    #[must_use]
     pub fn encoded_size(&self) -> usize {
         // LPC coeffs: order × 4 bytes
         // Gain: 4 bytes
@@ -84,6 +86,7 @@ impl ParametricParams {
     }
 
     /// Convert to fixed-point for embedded systems
+    #[must_use]
     pub fn to_fixed(&self) -> ParametricParamsFixed {
         ParametricParamsFixed {
             lpc: self.lpc.to_fixed(),
@@ -116,7 +119,7 @@ pub struct ParametricParamsFixed {
 
 /// Zero-copy view into parametric analysis results
 ///
-/// This struct borrows data from the ParametricLayer's internal buffers,
+/// This struct borrows data from the `ParametricLayer`'s internal buffers,
 /// avoiding all per-frame heap allocation. Use this for real-time processing.
 ///
 /// # Lifetime
@@ -144,8 +147,9 @@ pub struct ParametricParamsView<'a> {
     pub sample_rate: u32,
 }
 
-impl<'a> ParametricParamsView<'a> {
-    /// Convert to owned ParametricParams (allocates)
+impl ParametricParamsView<'_> {
+    /// Convert to owned `ParametricParams` (allocates)
+    #[must_use]
     pub fn to_owned(&self) -> ParametricParams {
         ParametricParams {
             lpc: LpcCoefficients {
@@ -164,6 +168,7 @@ impl<'a> ParametricParamsView<'a> {
 
     /// Estimate encoded size in bytes
     #[inline(always)]
+    #[must_use]
     pub fn encoded_size(&self) -> usize {
         4 + self.lpc_coeffs.len() * 4 + 4 + 8 + self.formant_count * 8 + 8
     }
@@ -215,6 +220,7 @@ pub struct ParametricLayer {
 
 impl ParametricLayer {
     /// Create new parametric layer with pre-allocated buffers
+    #[must_use]
     pub fn new(lpc_order: usize, frame_size: usize, sample_rate: u32) -> Self {
         Self {
             lpc_order,
@@ -238,11 +244,13 @@ impl ParametricLayer {
     }
 
     /// Create with default settings (10th order LPC, 512 samples, 16kHz)
+    #[must_use]
     pub fn default_config() -> Self {
         Self::new(10, 512, 16000)
     }
 
     /// Set quality level
+    #[must_use]
     pub fn with_quality(mut self, quality: VoiceQuality) -> Self {
         self.quality = quality;
         self.lpc_order = quality.lpc_order();
@@ -253,6 +261,7 @@ impl ParametricLayer {
 
     /// Get LPC order
     #[inline(always)]
+    #[must_use]
     pub fn lpc_order(&self) -> usize {
         self.lpc_order
     }
@@ -260,6 +269,10 @@ impl ParametricLayer {
     /// Analyze audio frame and extract parametric representation (allocating)
     ///
     /// For zero-allocation, use `analyze_into` instead.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if analysis fails.
     pub fn analyze(&mut self, samples: &[f32]) -> VoiceResult<ParametricParams> {
         // Use zero-alloc path internally, then convert to owned
         let view = self.analyze_into(samples)?;
@@ -275,6 +288,10 @@ impl ParametricLayer {
     ///
     /// This method performs zero heap allocation per frame, making it
     /// suitable for real-time audio processing.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError::BufferTooSmall` if the input is shorter than `frame_size`.
     pub fn analyze_into<'a>(
         &'a mut self,
         samples: &[f32],
@@ -339,6 +356,7 @@ impl ParametricLayer {
     /// Synthesize audio frame from parametric representation (allocating)
     ///
     /// For zero-allocation, use `synthesize_into` instead.
+    #[must_use]
     pub fn synthesize(&self, params: &ParametricParams) -> Vec<f32> {
         // Generate excitation based on pitch
         let excitation = generate_excitation(&params.pitch, params.frame_size, params.sample_rate);
@@ -357,6 +375,10 @@ impl ParametricLayer {
     ///
     /// This method performs zero heap allocation, using the layer's internal
     /// synthesis buffer for intermediate results.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError::BufferTooSmall` if the output buffer is too small.
     pub fn synthesize_into(
         &mut self,
         params: &ParametricParamsView<'_>,
@@ -414,6 +436,10 @@ impl ParametricLayer {
     }
 
     /// Process multiple frames
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if any frame analysis fails.
     pub fn analyze_stream(
         &mut self,
         samples: &[f32],
@@ -433,6 +459,7 @@ impl ParametricLayer {
     }
 
     /// Synthesize from multiple frames with overlap-add
+    #[must_use]
     pub fn synthesize_stream(&self, params_list: &[ParametricParams], hop_size: usize) -> Vec<f32> {
         if params_list.is_empty() {
             return Vec::new();
@@ -466,7 +493,11 @@ impl ParametricLayer {
     }
 }
 
-/// Convenience function: voice_to_params
+/// Convenience function: `voice_to_params`
+///
+/// # Errors
+///
+/// Returns `VoiceError` if parametric analysis fails.
 pub fn voice_to_params(samples: &[f32], sample_rate: u32) -> VoiceResult<Vec<ParametricParams>> {
     // 64ms frames to satisfy pitch detector (needs 2 * sample_rate/min_f0)
     let frame_size = (sample_rate as f32 * 0.064) as usize;
@@ -476,7 +507,8 @@ pub fn voice_to_params(samples: &[f32], sample_rate: u32) -> VoiceResult<Vec<Par
     layer.analyze_stream(samples, hop_size)
 }
 
-/// Convenience function: params_to_voice
+/// Convenience function: `params_to_voice`
+#[must_use]
 pub fn params_to_voice(params: &[ParametricParams], sample_rate: u32) -> Vec<f32> {
     if params.is_empty() {
         return Vec::new();

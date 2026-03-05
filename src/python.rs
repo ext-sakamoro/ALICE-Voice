@@ -11,7 +11,7 @@ use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
 #[cfg(feature = "python")]
 use crate::{EmotionType, ParametricParams, VoiceCodec, VoiceCodecConfig, VoiceQuality};
 
-/// Python wrapper for VoiceCodec
+/// Python wrapper for `VoiceCodec`
 #[cfg(feature = "python")]
 #[pyclass(name = "VoiceCodec")]
 pub struct PyVoiceCodec {
@@ -24,14 +24,14 @@ impl PyVoiceCodec {
     /// Create new voice codec
     ///
     /// Args:
-    ///     sample_rate: Sample rate in Hz (default: 16000)
+    ///     `sample_rate`: Sample rate in Hz (default: 16000)
     ///     quality: Quality level ("low", "medium", "high", "ultra")
     #[new]
     #[pyo3(signature = (sample_rate=16000, quality="medium"))]
+    #[allow(clippy::unnecessary_wraps)]
     fn new(sample_rate: u32, quality: &str) -> PyResult<Self> {
         let q = match quality.to_lowercase().as_str() {
             "low" => VoiceQuality::Low,
-            "medium" => VoiceQuality::Medium,
             "high" => VoiceQuality::High,
             "ultra" => VoiceQuality::Ultra,
             _ => VoiceQuality::Medium,
@@ -64,13 +64,14 @@ impl PyVoiceCodec {
 ///
 /// Args:
 ///     audio: Audio samples as float32 numpy array
-///     sample_rate: Sample rate in Hz
+///     `sample_rate`: Sample rate in Hz
 ///
 /// Returns:
 ///     List of parametric parameters (dict per frame)
 #[cfg(feature = "python")]
 #[pyfunction]
 #[pyo3(signature = (audio, sample_rate=16000))]
+#[allow(clippy::needless_pass_by_value, clippy::useless_conversion)]
 fn voice_to_params<'py>(
     py: Python<'py>,
     audio: PyReadonlyArray1<'py, f32>,
@@ -106,18 +107,19 @@ fn voice_to_params<'py>(
 ///
 /// Args:
 ///     params: List of parametric parameters (dict per frame)
-///     sample_rate: Sample rate in Hz
+///     `sample_rate`: Sample rate in Hz
 ///
 /// Returns:
 ///     Audio samples as float32 numpy array
 #[cfg(feature = "python")]
 #[pyfunction]
 #[pyo3(signature = (params, sample_rate=16000))]
-fn params_to_voice<'py>(
-    py: Python<'py>,
+#[allow(clippy::needless_pass_by_value, clippy::useless_conversion)]
+fn params_to_voice(
+    py: Python<'_>,
     params: Vec<PyObject>,
     sample_rate: u32,
-) -> PyResult<Bound<'py, PyArray1<f32>>> {
+) -> PyResult<Bound<'_, PyArray1<f32>>> {
     use crate::codec::lpc::LpcCoefficients;
     use crate::codec::pitch::PitchInfo;
     use crate::types::VoiceActivity;
@@ -189,13 +191,14 @@ fn params_to_voice<'py>(
 ///
 /// Args:
 ///     audio: Audio samples as float32 numpy array
-///     sample_rate: Sample rate in Hz
+///     `sample_rate`: Sample rate in Hz
 ///
 /// Returns:
 ///     Emotion parameters as dict
 #[cfg(feature = "python")]
 #[pyfunction]
 #[pyo3(signature = (audio, sample_rate=16000))]
+#[allow(clippy::needless_pass_by_value, clippy::useless_conversion)]
 fn emotion_encode<'py>(
     py: Python<'py>,
     audio: PyReadonlyArray1<'py, f32>,
@@ -228,18 +231,19 @@ fn emotion_encode<'py>(
 ///
 /// Args:
 ///     params: Emotion parameters as dict
-///     sample_rate: Sample rate in Hz
+///     `sample_rate`: Sample rate in Hz
 ///
 /// Returns:
 ///     Audio samples as float32 numpy array
 #[cfg(feature = "python")]
 #[pyfunction]
 #[pyo3(signature = (params, sample_rate=16000))]
-fn emotion_decode<'py>(
-    py: Python<'py>,
+#[allow(clippy::needless_pass_by_value, clippy::useless_conversion)]
+fn emotion_decode(
+    py: Python<'_>,
     params: PyObject,
     sample_rate: u32,
-) -> PyResult<Bound<'py, PyArray1<f32>>> {
+) -> PyResult<Bound<'_, PyArray1<f32>>> {
     let dict = params.downcast_bound::<pyo3::types::PyDict>(py)?;
 
     let emotion_str: String = dict

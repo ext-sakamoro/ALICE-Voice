@@ -43,6 +43,7 @@ pub struct LpcCoefficients {
 }
 
 impl LpcCoefficients {
+    #[must_use]
     pub fn new(order: usize) -> Self {
         Self {
             coeffs: vec![0.0; order],
@@ -52,11 +53,13 @@ impl LpcCoefficients {
         }
     }
 
+    #[must_use]
     pub fn order(&self) -> usize {
         self.coeffs.len()
     }
 
     /// Convert to Q16.16 fixed-point format
+    #[must_use]
     pub fn to_fixed(&self) -> LpcCoefficientsFixed {
         LpcCoefficientsFixed {
             coeffs: self
@@ -85,8 +88,9 @@ pub struct LpcCoefficientsView<'a> {
     pub error: f32,
 }
 
-impl<'a> LpcCoefficientsView<'a> {
-    /// Convert to owned LpcCoefficients (allocates)
+impl LpcCoefficientsView<'_> {
+    /// Convert to owned `LpcCoefficients` (allocates)
+    #[must_use]
     pub fn to_owned(&self) -> LpcCoefficients {
         LpcCoefficients {
             coeffs: self.coeffs.to_vec(),
@@ -96,6 +100,7 @@ impl<'a> LpcCoefficientsView<'a> {
         }
     }
 
+    #[must_use]
     pub fn order(&self) -> usize {
         self.coeffs.len()
     }
@@ -112,6 +117,7 @@ pub struct LpcCoefficientsFixed {
 
 impl LpcCoefficientsFixed {
     /// Convert back to floating-point
+    #[must_use]
     pub fn to_float(&self) -> LpcCoefficients {
         LpcCoefficients {
             coeffs: self
@@ -168,11 +174,13 @@ impl LpcAnalyzer {
     /// Create new LPC analyzer with specified order
     ///
     /// Uses default frame size of 1024 samples (64ms @ 16kHz)
+    #[must_use]
     pub fn new(order: usize) -> Self {
         Self::with_frame_size(order, 1024)
     }
 
     /// Create analyzer with explicit frame size for optimal buffer allocation
+    #[must_use]
     pub fn with_frame_size(order: usize, frame_size: usize) -> Self {
         // Pre-compute Hamming window
         let window: Vec<f32> = (0..frame_size)
@@ -196,12 +204,14 @@ impl LpcAnalyzer {
     }
 
     /// Set pre-emphasis coefficient
+    #[must_use]
     pub fn with_preemph(mut self, coeff: f32) -> Self {
         self.preemph = coeff;
         self
     }
 
     /// Get LPC order
+    #[must_use]
     pub fn order(&self) -> usize {
         self.order
     }
@@ -233,6 +243,10 @@ impl LpcAnalyzer {
     /// process(view.coeffs, view.gain); // Direct access
     /// let owned = view.to_owned();     // Allocate only when needed
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError::BufferTooSmall` if the input is shorter than `2 * order`.
     pub fn analyze_view(&mut self, samples: &[f32]) -> VoiceResult<LpcCoefficientsView<'_>> {
         let n = samples.len();
         if n < self.order * 2 {
@@ -270,6 +284,10 @@ impl LpcAnalyzer {
     /// Analyze audio frame and return owned coefficients
     ///
     /// Convenience wrapper that allocates. Use `analyze_view` for hot paths.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError::BufferTooSmall` if the input is shorter than `2 * order`.
     pub fn analyze(&mut self, samples: &[f32]) -> VoiceResult<LpcCoefficients> {
         let view = self.analyze_view(samples)?;
         Ok(view.to_owned())
@@ -280,6 +298,10 @@ impl LpcAnalyzer {
     /// # True Zero-Allocation
     ///
     /// This method performs NO heap allocation. Caller provides output buffer.
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError::BufferTooSmall` if the input is shorter than `2 * order`.
     pub fn analyze_into(
         &mut self,
         samples: &[f32],
@@ -298,6 +320,7 @@ impl LpcAnalyzer {
     }
 
     /// Synthesize audio from LPC coefficients and excitation signal
+    #[must_use]
     pub fn synthesize(&self, coeffs: &LpcCoefficients, excitation: &[f32]) -> Vec<f32> {
         let n = excitation.len();
         let order = coeffs.order();
@@ -322,6 +345,7 @@ impl LpcAnalyzer {
     }
 
     /// Synthesize using View (no allocation for coefficients)
+    #[must_use]
     pub fn synthesize_view(&self, view: &LpcCoefficientsView<'_>, excitation: &[f32]) -> Vec<f32> {
         let n = excitation.len();
         let order = view.order();
@@ -532,12 +556,13 @@ impl LpcAnalyzer {
 ///
 /// Optimized for ARM Cortex-M and similar embedded targets.
 pub mod lpc_fixed {
-    use super::*;
+    use super::{LpcCoefficientsFixed, VoiceResult, Q16_SHIFT};
 
     /// Compute autocorrelation in fixed-point
     ///
     /// Uses SIMD-friendly patterns for ARM NEON auto-vectorization.
     #[inline(always)]
+    #[must_use]
     pub fn autocorrelation_fixed(samples: &[i32], order: usize) -> Vec<i64> {
         let n = samples.len();
         let mut r = vec![0i64; order + 1];
@@ -557,6 +582,7 @@ pub mod lpc_fixed {
     /// Fast Q16.16 multiply (ARM-optimized)
     #[inline(always)]
     #[cfg(target_arch = "aarch64")]
+    #[must_use]
     pub fn q16_mul(a: i32, b: i32) -> i32 {
         // On ARM64, compiles to SMULL + ASR
         ((a as i64 * b as i64) >> Q16_SHIFT) as i32
@@ -572,6 +598,7 @@ pub mod lpc_fixed {
     /// Fast Q16.16 multiply-accumulate (ARM-optimized)
     #[inline(always)]
     #[cfg(target_arch = "aarch64")]
+    #[must_use]
     pub fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
         // On ARM64, compiles to SMLAL
         acc + ((a as i64 * b as i64) >> Q16_SHIFT) as i32
@@ -588,6 +615,7 @@ pub mod lpc_fixed {
     ///
     /// For embedded systems without FPU.
     #[inline(always)]
+    #[must_use]
     pub fn fast_isqrt(n: i64) -> i32 {
         if n <= 0 {
             return 0;
@@ -609,6 +637,10 @@ pub mod lpc_fixed {
     }
 
     /// Levinson-Durbin in fixed-point
+    ///
+    /// # Errors
+    ///
+    /// Returns `VoiceError` if the Levinson-Durbin recursion becomes unstable.
     pub fn levinson_durbin_fixed(r: &[i64], order: usize) -> VoiceResult<LpcCoefficientsFixed> {
         let mut coeffs = vec![0i32; order];
         let mut tmp = vec![0i64; order];
@@ -656,6 +688,7 @@ pub mod lpc_fixed {
     }
 
     /// Synthesize audio from fixed-point LPC coefficients
+    #[must_use]
     pub fn synthesize_fixed(coeffs: &LpcCoefficientsFixed, excitation: &[i32]) -> Vec<i32> {
         let n = excitation.len();
         let order = coeffs.coeffs.len();
