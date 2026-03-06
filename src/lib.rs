@@ -54,6 +54,7 @@
 pub mod api;
 pub mod codec;
 pub mod layers;
+pub mod noise;
 pub mod simd;
 pub mod types;
 
@@ -78,6 +79,9 @@ pub mod text_bridge;
 // Re-export main types
 pub use api::*;
 pub use types::*;
+
+// Re-export noise reduction
+pub use noise::{NoiseProfile, SpectralSubtractor};
 
 // Re-export layer modules
 pub use layers::{ParametricLayer, ParametricParams, SpectralLayer, SpectralParams};
