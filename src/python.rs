@@ -49,13 +49,13 @@ impl PyVoiceCodec {
 
     /// Get sample rate
     #[getter]
-    fn sample_rate(&self) -> u32 {
+    const fn sample_rate(&self) -> u32 {
         self.inner.config().sample_rate
     }
 
     /// Get frame size
     #[getter]
-    fn frame_size(&self) -> usize {
+    const fn frame_size(&self) -> usize {
         self.inner.config().frame_size
     }
 }
@@ -276,7 +276,7 @@ fn emotion_decode(
 /// Get library version
 #[cfg(feature = "python")]
 #[pyfunction]
-fn version() -> &'static str {
+const fn version() -> &'static str {
     crate::VERSION
 }
 
