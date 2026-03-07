@@ -139,11 +139,7 @@ impl SpectralSubtractor {
         assert_eq!(frame.len(), n, "frame length must match frame_size");
 
         // 窓関数適用
-        let windowed: Vec<f32> = frame
-            .iter()
-            .zip(&self.window)
-            .map(|(s, w)| s * w)
-            .collect();
+        let windowed: Vec<f32> = frame.iter().zip(&self.window).map(|(s, w)| s * w).collect();
 
         // DFT
         let (re, im) = dft(&windowed);
@@ -278,7 +274,7 @@ mod tests {
         // 決定論的擬似ノイズ (テスト再現性)
         (0..n)
             .map(|i| {
-                let x = (i as f32 * 1.618_034).fract() * 2.0 - 1.0;
+                let x = (i as f32 * 1.618_034).fract().mul_add(2.0, -1.0);
                 x * amplitude
             })
             .collect()
@@ -380,11 +376,7 @@ mod tests {
         assert_eq!(profile.frame_count, 2);
         assert_eq!(profile.num_bins(), FRAME / 2 + 1);
         // ノイズパワーは小さいはず
-        let max_power = profile
-            .power
-            .iter()
-            .copied()
-            .fold(0.0f32, f32::max);
+        let max_power = profile.power.iter().copied().fold(0.0f32, f32::max);
         assert!(max_power < 1.0, "max noise power = {max_power}");
     }
 
@@ -394,7 +386,7 @@ mod tests {
 
         // ノイズ推定
         let noise_frames: Vec<Vec<f32>> = (0..4).map(|_| white_noise(FRAME, 0.1)).collect();
-        let noise_refs: Vec<&[f32]> = noise_frames.iter().map(|v| v.as_slice()).collect();
+        let noise_refs: Vec<&[f32]> = noise_frames.iter().map(std::vec::Vec::as_slice).collect();
         let profile = sub.estimate_noise(&noise_refs);
 
         // 信号 + ノイズ
@@ -461,7 +453,7 @@ mod tests {
         let sub = SpectralSubtractor::with_params(FRAME, 4.0, 0.01);
         let frame = white_noise(FRAME, 0.5);
         let mut profile = NoiseProfile::new(FRAME / 2 + 1);
-        profile.accumulate(&vec![1.0; FRAME / 2 + 1]);
+        profile.accumulate(&[1.0; FRAME / 2 + 1]);
         profile.finalize();
 
         let result = sub.subtract(&frame, &profile);
