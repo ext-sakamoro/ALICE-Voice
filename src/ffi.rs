@@ -50,7 +50,6 @@ pub extern "C" fn alice_voice_codec_create() -> *mut VoiceCodec {
 pub extern "C" fn alice_voice_codec_create_quality(quality: u8) -> *mut VoiceCodec {
     let q = match quality {
         0 => VoiceQuality::Low,
-        1 => VoiceQuality::Medium,
         2 => VoiceQuality::High,
         3 => VoiceQuality::Ultra,
         _ => VoiceQuality::Medium,
@@ -96,10 +95,11 @@ pub unsafe extern "C" fn alice_voice_codec_encode_parametric(
     }
     let codec = &mut *codec;
     let slice = std::slice::from_raw_parts(samples, len as usize);
-    match codec.encode_parametric(slice) {
-        Ok(params) => Box::into_raw(Box::new(ParamsList { params })),
-        Err(_) => ptr::null_mut(),
-    }
+    codec
+        .encode_parametric(slice)
+        .map_or(ptr::null_mut(), |params| {
+            Box::into_raw(Box::new(ParamsList { params }))
+        })
 }
 
 // ============================================
@@ -156,16 +156,15 @@ pub unsafe extern "C" fn alice_voice_codec_encode_spectral(
     }
     let codec = &mut *codec;
     let slice = std::slice::from_raw_parts(samples, len as usize);
-    match codec.encode_spectral(slice) {
-        Ok(params) => {
+    codec
+        .encode_spectral(slice)
+        .map_or(ptr::null_mut(), |params| {
             if !out_frames.is_null() {
                 *out_frames = params.len() as c_uint;
             }
             let decoded = codec.decode_spectral(&params);
             Box::into_raw(Box::new(AudioBuffer { samples: decoded }))
-        }
-        Err(_) => ptr::null_mut(),
-    }
+        })
 }
 
 // ============================================
@@ -202,7 +201,7 @@ pub unsafe extern "C" fn alice_voice_audio_ptr(
 ///
 /// `codec` must be valid.
 #[no_mangle]
-pub unsafe extern "C" fn alice_voice_codec_sample_rate(codec: *const VoiceCodec) -> c_uint {
+pub const unsafe extern "C" fn alice_voice_codec_sample_rate(codec: *const VoiceCodec) -> c_uint {
     if codec.is_null() {
         return 0;
     }
@@ -219,7 +218,7 @@ pub unsafe extern "C" fn alice_voice_codec_sample_rate(codec: *const VoiceCodec)
 ///
 /// `codec` must be valid.
 #[no_mangle]
-pub unsafe extern "C" fn alice_voice_codec_frame_size(codec: *const VoiceCodec) -> c_uint {
+pub const unsafe extern "C" fn alice_voice_codec_frame_size(codec: *const VoiceCodec) -> c_uint {
     if codec.is_null() {
         return 0;
     }
@@ -236,7 +235,7 @@ pub unsafe extern "C" fn alice_voice_codec_frame_size(codec: *const VoiceCodec) 
 ///
 /// `params` must be valid.
 #[no_mangle]
-pub unsafe extern "C" fn alice_voice_params_count(params: *const ParamsList) -> c_uint {
+pub const unsafe extern "C" fn alice_voice_params_count(params: *const ParamsList) -> c_uint {
     if params.is_null() {
         return 0;
     }
@@ -379,10 +378,10 @@ pub unsafe extern "C" fn alice_voice_to_params(
         return ptr::null_mut();
     }
     let slice = std::slice::from_raw_parts(samples, len as usize);
-    match crate::layers::parametric::voice_to_params(slice, sample_rate) {
-        Ok(params) => Box::into_raw(Box::new(ParamsList { params })),
-        Err(_) => ptr::null_mut(),
-    }
+    crate::layers::parametric::voice_to_params(slice, sample_rate)
+        .map_or(ptr::null_mut(), |params| {
+            Box::into_raw(Box::new(ParamsList { params }))
+        })
 }
 
 // ============================================
@@ -415,7 +414,7 @@ pub unsafe extern "C" fn alice_voice_from_params(
 // 18. alice_voice_data_free
 // ============================================
 
-/// Free an `AudioBuffer` returned by decode/from_params functions.
+/// Free an `AudioBuffer` returned by `decode`/`from_params` functions.
 ///
 /// # Safety
 ///
@@ -508,7 +507,7 @@ mod tests {
             assert!(count > 0);
 
             let mut out_len: u32 = 0;
-            let audio = alice_voice_codec_decode_parametric(codec, params, &mut out_len);
+            let audio = alice_voice_codec_decode_parametric(codec, params, &raw mut out_len);
             assert!(!audio.is_null());
             assert!(out_len > 0);
 
@@ -532,7 +531,7 @@ mod tests {
             assert!(count > 0);
 
             let mut out_len: u32 = 0;
-            let audio = alice_voice_from_params(params, 16000, &mut out_len);
+            let audio = alice_voice_from_params(params, 16000, &raw mut out_len);
             assert!(!audio.is_null());
             assert!(out_len > 0);
 
@@ -560,10 +559,10 @@ mod tests {
             alice_voice_stats(
                 params,
                 samples.len() as u32,
-                &mut frames,
-                &mut voiced,
-                &mut avg_pitch,
-                &mut compression,
+                &raw mut frames,
+                &raw mut voiced,
+                &raw mut avg_pitch,
+                &raw mut compression,
             );
 
             assert!(frames > 0);
@@ -621,9 +620,9 @@ mod tests {
             assert_eq!(alice_voice_codec_sample_rate(ptr::null()), 0);
             assert_eq!(alice_voice_codec_frame_size(ptr::null()), 0);
             assert_eq!(alice_voice_params_count(ptr::null()), 0);
-            assert_eq!(
-                alice_voice_speaker_similarity(ptr::null(), ptr::null()),
-                -1.0
+            assert!(
+                (alice_voice_speaker_similarity(ptr::null(), ptr::null()) - (-1.0)).abs()
+                    < f32::EPSILON
             );
         }
     }
@@ -641,13 +640,13 @@ mod tests {
                 codec,
                 samples.as_ptr(),
                 samples.len() as u32,
-                &mut frames,
+                &raw mut frames,
             );
             assert!(!buf.is_null());
             assert!(frames > 0);
 
             let mut out_len: u32 = 0;
-            let ptr = alice_voice_audio_ptr(buf, &mut out_len);
+            let ptr = alice_voice_audio_ptr(buf, &raw mut out_len);
             assert!(!ptr.is_null());
             assert!(out_len > 0);
 

@@ -11,7 +11,7 @@ categories = ["multimedia::audio", "compression", "encoding"]
 
 [lib]
 name = "alice_voice"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 default = ["std", "python"]
@@ -36,8 +36,8 @@ thiserror = "1.0"
 rayon = "1.10"
 
 # Python bindings (optional)
-pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
-numpy = { version = "0.22", optional = true }
+pyo3 = { version = "0.28", features = ["extension-module"], optional = true }
+numpy = { version = "0.28", optional = true }
 
 # ML inference (optional)
 alice-ml = { path = "../ALICE-ML", optional = true, default-features = false, features = ["std"] }
