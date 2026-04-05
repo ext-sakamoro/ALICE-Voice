@@ -70,6 +70,10 @@ pub struct SpectralSubtractor {
     spectral_floor: f32,
     /// Hann 窓。
     window: Vec<f32>,
+    /// 窓適用後の信号バッファ (subtract/frame_power 用)。
+    ws_windowed: Vec<f32>,
+    /// パワースペクトルバッファ (frame_power 用)。
+    ws_power: Vec<f32>,
 }
 
 impl SpectralSubtractor {
@@ -83,11 +87,14 @@ impl SpectralSubtractor {
     #[must_use]
     pub fn with_params(frame_size: usize, over_subtraction: f32, spectral_floor: f32) -> Self {
         let window = hann_window(frame_size);
+        let half = frame_size / 2 + 1;
         Self {
             frame_size,
             over_subtraction,
             spectral_floor,
             window,
+            ws_windowed: vec![0.0f32; frame_size],
+            ws_power: vec![0.0f32; half],
         }
     }
 
@@ -113,13 +120,13 @@ impl SpectralSubtractor {
     ///
     /// `silence_frames`: 各フレームは `frame_size` サンプル。
     #[must_use]
-    pub fn estimate_noise(&self, silence_frames: &[&[f32]]) -> NoiseProfile {
+    pub fn estimate_noise(&mut self, silence_frames: &[&[f32]]) -> NoiseProfile {
         let half = self.frame_size / 2 + 1;
         let mut profile = NoiseProfile::new(half);
 
         for frame in silence_frames {
             let power = self.frame_power(frame);
-            profile.accumulate(&power);
+            profile.accumulate(power);
         }
         profile.finalize();
         profile
@@ -134,15 +141,17 @@ impl SpectralSubtractor {
     ///
     /// `frame.len() != frame_size` の場合パニック。
     #[must_use]
-    pub fn subtract(&self, frame: &[f32], noise: &NoiseProfile) -> Vec<f32> {
+    pub fn subtract(&mut self, frame: &[f32], noise: &NoiseProfile) -> Vec<f32> {
         let n = self.frame_size;
         assert_eq!(frame.len(), n, "frame length must match frame_size");
 
-        // 窓関数適用
-        let windowed: Vec<f32> = frame.iter().zip(&self.window).map(|(s, w)| s * w).collect();
+        // 窓関数適用 (事前確保バッファを再利用)
+        for (w, (&s, &win)) in self.ws_windowed.iter_mut().zip(frame.iter().zip(&self.window)) {
+            *w = s * win;
+        }
 
         // DFT
-        let (re, im) = dft(&windowed);
+        let (re, im) = dft(&self.ws_windowed);
         let half = n / 2 + 1;
 
         // パワースペクトル計算 & ノイズ減算
@@ -185,21 +194,24 @@ impl SpectralSubtractor {
     }
 
     /// フレームのパワースペクトル (半帯域) を計算。
-    fn frame_power(&self, frame: &[f32]) -> Vec<f32> {
+    fn frame_power(&mut self, frame: &[f32]) -> &[f32] {
         let n = self.frame_size;
         let len = frame.len().min(n);
-        let mut windowed = vec![0.0f32; n];
-        for i in 0..len {
-            windowed[i] = frame[i] * self.window[i];
-        }
 
-        let (re, im) = dft(&windowed);
+        // 事前確保バッファを再利用
+        self.ws_windowed[..len]
+            .iter_mut()
+            .zip(&frame[..len])
+            .zip(&self.window[..len])
+            .for_each(|((w, &s), &win)| *w = s * win);
+        self.ws_windowed[len..].fill(0.0);
+
+        let (re, im) = dft(&self.ws_windowed);
         let half = n / 2 + 1;
-        let mut power = Vec::with_capacity(half);
         for k in 0..half {
-            power.push(re[k].mul_add(re[k], im[k] * im[k]));
+            self.ws_power[k] = re[k].mul_add(re[k], im[k] * im[k]);
         }
-        power
+        &self.ws_power[..half]
     }
 }
 
@@ -368,7 +380,7 @@ mod tests {
 
     #[test]
     fn estimate_noise_from_silence() {
-        let sub = SpectralSubtractor::new(FRAME);
+        let mut sub = SpectralSubtractor::new(FRAME);
         let silence1 = white_noise(FRAME, 0.01);
         let silence2 = white_noise(FRAME, 0.01);
         let profile = sub.estimate_noise(&[&silence1, &silence2]);
@@ -382,7 +394,7 @@ mod tests {
 
     #[test]
     fn subtract_reduces_noise() {
-        let sub = SpectralSubtractor::new(FRAME);
+        let mut sub = SpectralSubtractor::new(FRAME);
 
         // ノイズ推定
         let noise_frames: Vec<Vec<f32>> = (0..4).map(|_| white_noise(FRAME, 0.1)).collect();
@@ -413,7 +425,7 @@ mod tests {
 
     #[test]
     fn subtract_silent_input() {
-        let sub = SpectralSubtractor::new(FRAME);
+        let mut sub = SpectralSubtractor::new(FRAME);
         let silence = vec![0.0f32; FRAME];
         let profile = NoiseProfile::new(FRAME / 2 + 1);
         let result = sub.subtract(&silence, &profile);
@@ -423,7 +435,7 @@ mod tests {
 
     #[test]
     fn subtract_preserves_length() {
-        let sub = SpectralSubtractor::new(FRAME);
+        let mut sub = SpectralSubtractor::new(FRAME);
         let frame = sine_frame(200.0, 8000.0, FRAME);
         let profile = NoiseProfile::new(FRAME / 2 + 1);
         let result = sub.subtract(&frame, &profile);
@@ -433,7 +445,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "frame length must match frame_size")]
     fn subtract_wrong_length_panics() {
-        let sub = SpectralSubtractor::new(FRAME);
+        let mut sub = SpectralSubtractor::new(FRAME);
         let frame = vec![0.0f32; FRAME + 1];
         let profile = NoiseProfile::new(FRAME / 2 + 1);
         let _ = sub.subtract(&frame, &profile);
@@ -450,7 +462,7 @@ mod tests {
 
     #[test]
     fn high_over_subtraction() {
-        let sub = SpectralSubtractor::with_params(FRAME, 4.0, 0.01);
+        let mut sub = SpectralSubtractor::with_params(FRAME, 4.0, 0.01);
         let frame = white_noise(FRAME, 0.5);
         let mut profile = NoiseProfile::new(FRAME / 2 + 1);
         profile.accumulate(&[1.0; FRAME / 2 + 1]);

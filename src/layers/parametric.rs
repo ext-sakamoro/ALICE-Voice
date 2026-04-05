@@ -322,13 +322,13 @@ impl ParametricLayer {
         // 3. Pitch detection (returns Copy type)
         let pitch = self.pitch_detector.detect(frame)?;
 
-        // 4. Formant extraction - need to create temporary LpcCoefficients
-        //    for the formant extractor API
+        // 4. Formant extraction - build temporary LpcCoefficients from already-copied
+        //    internal buffers to avoid redundant Vec allocations from lpc_view slices.
         let lpc_for_formant = LpcCoefficients {
-            coeffs: lpc_view.coeffs.to_vec(),
-            reflection: lpc_view.reflection.to_vec(),
-            gain: lpc_view.gain,
-            error: lpc_view.error,
+            coeffs: self.out_lpc_coeffs[..order].to_vec(),
+            reflection: self.out_lpc_reflection[..order].to_vec(),
+            gain: self.out_lpc_gain,
+            error: self.out_lpc_error,
         };
         let formant_result = self.formant_extractor.extract(&lpc_for_formant)?;
 
