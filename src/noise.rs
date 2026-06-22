@@ -146,7 +146,11 @@ impl SpectralSubtractor {
         assert_eq!(frame.len(), n, "frame length must match frame_size");
 
         // 窓関数適用 (事前確保バッファを再利用)
-        for (w, (&s, &win)) in self.ws_windowed.iter_mut().zip(frame.iter().zip(&self.window)) {
+        for (w, (&s, &win)) in self
+            .ws_windowed
+            .iter_mut()
+            .zip(frame.iter().zip(&self.window))
+        {
             *w = s * win;
         }
 
