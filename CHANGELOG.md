@@ -2,6 +2,11 @@
 
 All notable changes to ALICE-Voice will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- optional `alice-db` dependency (feature `db`) now requires `0.5` and enables its `fs` feature (file-backed `AliceDB::open`, which is no longer part of the default-features-off build) builds against sibling ALICE-DB 0.5.0 crates.io publication waits for alice-db 0.5.0 on the registry
+
 ## [0.1.1] - 2026-03-04
 
 ### Added

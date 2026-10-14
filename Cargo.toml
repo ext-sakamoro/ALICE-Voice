@@ -46,7 +46,7 @@ alice-ml = { path = "../ALICE-ML", optional = true, default-features = false, fe
 alice-codec = { path = "../ALICE-Codec", version = "0.1", optional = true, default-features = false, features = ["std"] }
 
 # DB bridge (optional)
-alice-db = { path = "../ALICE-DB", version = "0.2.0-beta.1", optional = true, default-features = false }
+alice-db = { path = "../ALICE-DB", version = "0.5", optional = true, default-features = false, features = ["fs"] }
 
 # Text bridge (optional)
 alice-text = { path = "../ALICE-Text", optional = true, default-features = false }
