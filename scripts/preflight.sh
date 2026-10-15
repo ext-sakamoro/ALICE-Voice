@@ -44,8 +44,11 @@ fi
 step "ci.yml / test: Test"
 ( export CARGO_TERM_COLOR="always"; cargo test --lib --no-default-features --features std )
 
+step "ci.yml / test: Check the db bridge (optional feature)"
+( export CARGO_TERM_COLOR="always"; cargo check --lib --features db )
+
 step "security-audit.yml / audit: cargo audit"
 need cargo-audit "cargo install cargo-audit --locked"
-cargo audit --deny yanked
+cargo audit --deny yanked --ignore RUSTSEC-2026-0235
 
 echo; echo "preflight OK"

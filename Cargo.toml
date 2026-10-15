@@ -20,7 +20,8 @@ ffi = ["std"]     # C/C++/C# FFI bindings
 python = ["pyo3", "numpy"]
 ml = ["dep:alice-ml"]   # ALICE-ML ternary inference for voice parameters
 codec = ["dep:alice-codec"]  # ALICE-Codec wavelet + rANS for parameter compression
-db = ["dep:alice-db"]   # ALICE-DB voice metrics persistence
+# `alice-db/fs`: `AliceDB::open` (file-backed) is behind that feature in alice-db 0.5
+db = ["dep:alice-db", "alice-db/fs"]   # ALICE-DB voice metrics persistence
 text = ["dep:alice-text"]  # ALICE-Text compressed voice transcript metadata
 no_std = []
 
@@ -46,7 +47,7 @@ alice-ml = { path = "../ALICE-ML", optional = true, default-features = false, fe
 alice-codec = { path = "../ALICE-Codec", version = "0.1", optional = true, default-features = false, features = ["std"] }
 
 # DB bridge (optional)
-alice-db = { path = "../ALICE-DB", version = "0.2.0-beta.1", optional = true, default-features = false }
+alice-db = { version = "0.5", optional = true, default-features = false }
 
 # Text bridge (optional)
 alice-text = { path = "../ALICE-Text", optional = true, default-features = false }
