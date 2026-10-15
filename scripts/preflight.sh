@@ -28,8 +28,14 @@ step "ci.yml / fmt: Check formatting"
 step "ci.yml / actionlint: actionlint"
 actionlint .github/workflows/*.yml
 
+step "ci.yml / test: Build (default)"
+( export CARGO_TERM_COLOR="always"; cargo build --lib )
+
 if [[ $quick -eq 1 ]]; then
   echo; echo "preflight --quick OK (test / bench suites skipped)"; exit 0
 fi
+
+step "ci.yml / test: Test"
+( export CARGO_TERM_COLOR="always"; cargo test --lib --no-default-features --features std )
 
 echo; echo "preflight OK"

@@ -2,6 +2,15 @@
 
 All notable changes to ALICE-Voice will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- `simd`: x86_64 など ARM 以外の target で `simd::scalar` が存在しない `arm` module を参照して compile できなかった問題を修正 (共通の整数演算 4 関数を `simd::common` へ移し両 backend から再 export)
+- `simd`: scalar backend (ARM 以外) と 32-bit ARM の fallback の出力を aarch64 NEON と bit 一致させた 出力が変わるのは scalar の `q16_cosine_similarity_neon` (結果が 2^16 倍になっていた scale の誤りと整数平方根による差) と、scalar / 32-bit ARM の `q16_lpc_filter_neon` (order 4 以上で tap ごとに丸めていたため 1-2 LSB ずれていた) aarch64 の出力は変わらない (NEON の 64-bit 和の最後の加算を wrapping にしたが release build の値は同じで、debug build で overflow 時に panic しなくなる)
+
+### Added
+- CI: x86_64 と aarch64 の build / test job と、scalar と NEON の結果を bit 単位で比べる test
+
 ## [0.1.1] - 2026-03-04
 
 ### Added

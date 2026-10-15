@@ -8,6 +8,8 @@
 
 use crate::types::{EMBEDDING_DIM, Q16_SHIFT};
 
+pub use super::common::{fast_isqrt_32, fast_isqrt_64, q16_mac, q16_mul};
+
 #[cfg(target_arch = "aarch64")]
 use core::arch::aarch64::{
     vaddq_s64, vcombine_s32, vdupq_n_s64, vget_high_s32, vget_low_s32, vgetq_lane_s64, vld1q_s32,
@@ -15,22 +17,8 @@ use core::arch::aarch64::{
 };
 
 // ============================================
-// Q16.16 Fixed-Point Operations (Scalar)
+// Q16.16 Fixed-Point Operations (NEON)
 // ============================================
-
-/// Q16.16 multiply using 64-bit intermediate (scalar)
-#[inline(always)]
-#[must_use]
-pub const fn q16_mul(a: i32, b: i32) -> i32 {
-    ((a as i64 * b as i64) >> Q16_SHIFT) as i32
-}
-
-/// Q16.16 multiply-accumulate (scalar)
-#[inline(always)]
-#[must_use]
-pub const fn q16_mac(acc: i32, a: i32, b: i32) -> i32 {
-    acc + q16_mul(a, b)
-}
 
 /// Q16.16 multiply 4 values in parallel (NEON)
 ///
@@ -64,12 +52,7 @@ pub unsafe fn q16_mul_4x_neon(a: &[i32; 4], b: &[i32; 4]) -> [i32; 4] {
 #[cfg(not(target_arch = "aarch64"))]
 #[inline(always)]
 pub fn q16_mul_4x_neon(a: &[i32; 4], b: &[i32; 4]) -> [i32; 4] {
-    [
-        q16_mul(a[0], b[0]),
-        q16_mul(a[1], b[1]),
-        q16_mul(a[2], b[2]),
-        q16_mul(a[3], b[3]),
-    ]
+    super::common::q16_mul_4x(a, b)
 }
 
 // ============================================
@@ -127,16 +110,16 @@ pub fn q16_dot_product_neon(a: &[i32], b: &[i32]) -> i64 {
             i += 16;
         }
 
-        // Combine accumulators
+        // Combine accumulators (64-bit lanes wrap, so the scalar reductions wrap too)
         let sum_lo = vaddq_s64(acc0_lo, acc1_lo);
         let sum_hi = vaddq_s64(acc0_hi, acc1_hi);
         let final_acc = vaddq_s64(sum_lo, sum_hi);
 
-        let mut sum = vgetq_lane_s64(final_acc, 0) + vgetq_lane_s64(final_acc, 1);
+        let mut sum = vgetq_lane_s64(final_acc, 0).wrapping_add(vgetq_lane_s64(final_acc, 1));
 
         // Handle remainder (scalar)
         while i < len {
-            sum += *ptr_a as i64 * *ptr_b as i64;
+            sum = sum.wrapping_add(*ptr_a as i64 * *ptr_b as i64);
             ptr_a = ptr_a.add(1);
             ptr_b = ptr_b.add(1);
             i += 1;
@@ -148,12 +131,7 @@ pub fn q16_dot_product_neon(a: &[i32], b: &[i32]) -> i64 {
 
 #[cfg(not(target_arch = "aarch64"))]
 pub fn q16_dot_product_neon(a: &[i32], b: &[i32]) -> i64 {
-    // Fallback
-    a.iter()
-        .zip(b.iter())
-        .map(|(&x, &y)| x as i64 * y as i64)
-        .sum::<i64>()
-        >> Q16_SHIFT
+    super::common::q16_dot_product(a, b)
 }
 
 // ============================================
@@ -217,13 +195,13 @@ pub fn q16_cosine_similarity_neon(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_
 
         // Reduction
         let dot_sum = vaddq_s64(dot_lo, dot_hi);
-        let dot = vgetq_lane_s64(dot_sum, 0) + vgetq_lane_s64(dot_sum, 1);
+        let dot = vgetq_lane_s64(dot_sum, 0).wrapping_add(vgetq_lane_s64(dot_sum, 1));
 
         let na_sum = vaddq_s64(na_lo, na_hi);
-        let na = vgetq_lane_s64(na_sum, 0) + vgetq_lane_s64(na_sum, 1);
+        let na = vgetq_lane_s64(na_sum, 0).wrapping_add(vgetq_lane_s64(na_sum, 1));
 
         let nb_sum = vaddq_s64(nb_lo, nb_hi);
-        let nb = vgetq_lane_s64(nb_sum, 0) + vgetq_lane_s64(nb_sum, 1);
+        let nb = vgetq_lane_s64(nb_sum, 0).wrapping_add(vgetq_lane_s64(nb_sum, 1));
 
         // Q16 scaling
         let dot_q16 = dot >> Q16_SHIFT;
@@ -243,27 +221,7 @@ pub fn q16_cosine_similarity_neon(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_
 
 #[cfg(not(target_arch = "aarch64"))]
 pub fn q16_cosine_similarity_neon(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_DIM]) -> i32 {
-    let mut dot = 0i64;
-    let mut norm_a = 0i64;
-    let mut norm_b = 0i64;
-
-    for i in 0..EMBEDDING_DIM {
-        dot += a[i] as i64 * b[i] as i64;
-        norm_a += a[i] as i64 * a[i] as i64;
-        norm_b += b[i] as i64 * b[i] as i64;
-    }
-
-    let dot_q16 = dot >> Q16_SHIFT;
-    let norm_a_q16 = norm_a >> Q16_SHIFT;
-    let norm_b_q16 = norm_b >> Q16_SHIFT;
-
-    let denom = ((norm_a_q16 as f64).sqrt() * (norm_b_q16 as f64).sqrt()) as i64;
-
-    if denom > 0 {
-        ((dot_q16 << 16) / denom) as i32
-    } else {
-        0
-    }
+    super::common::q16_cosine_similarity(a, b)
 }
 
 // ============================================
@@ -332,7 +290,7 @@ pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output
                 }
 
                 let sum_lo = vaddq_s64(acc_lo, acc_hi);
-                let sum = vgetq_lane_s64(sum_lo, 0) + vgetq_lane_s64(sum_lo, 1);
+                let sum = vgetq_lane_s64(sum_lo, 0).wrapping_add(vgetq_lane_s64(sum_lo, 1));
 
                 sample += (sum >> Q16_SHIFT) as i32;
 
@@ -358,70 +316,7 @@ pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output
 
 #[cfg(not(target_arch = "aarch64"))]
 pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output: &mut [i32]) {
-    // Fallback
-    let order = coeffs.len();
-    let n = excitation.len().min(output.len());
-    for i in 0..n {
-        let mut sample = q16_mul(gain, excitation[i]);
-        for j in 0..order.min(i) {
-            sample = q16_mac(sample, coeffs[j], output[i - 1 - j]);
-        }
-        output[i] = sample;
-    }
-}
-
-// ============================================
-// Fast Integer Math
-// ============================================
-
-/// Fast integer square root (64-bit input, 32-bit output)
-///
-/// Uses Newton-Raphson with a good initial guess.
-/// Returns floor(sqrt(n)).
-#[inline]
-#[must_use]
-pub const fn fast_isqrt_64(n: u64) -> u32 {
-    if n == 0 {
-        return 0;
-    }
-    if n < 4 {
-        return 1;
-    }
-
-    // Initial guess: 2^((log2(n) / 2) + 1) to start above the answer
-    let log2 = 63 - n.leading_zeros();
-    let mut x = 1u64 << ((log2 / 2) + 1);
-
-    // Newton-Raphson iterations
-    loop {
-        let x1 = (x + n / x) >> 1;
-        if x1 >= x {
-            break;
-        }
-        x = x1;
-    }
-
-    x as u32
-}
-
-/// Fast integer square root (32-bit)
-#[inline]
-#[must_use]
-pub const fn fast_isqrt_32(n: u32) -> u16 {
-    if n == 0 {
-        return 0;
-    }
-
-    let shift = (32 - n.leading_zeros()) / 2;
-    let mut x = 1u32 << shift;
-
-    loop {
-        let x1 = (x + n / x) >> 1;
-        if x1 >= x {
-            return x as u16;
-        }
-        x = x1;
-    }
+    super::common::q16_lpc_filter(coeffs, gain, excitation, output);
 }
 
 #[cfg(test)]

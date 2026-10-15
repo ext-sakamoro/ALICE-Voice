@@ -10,6 +10,42 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # x86_64 builds the scalar backend; aarch64 builds NEON and runs the
+        # scalar-vs-NEON bit-for-bit test (simd::tests::scalar_matches_arm_bit_for_bit)
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: ALICE-Voice
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ALICE-Voice
+
+      # The path siblings are all optional and outside `default`, so empty stubs
+      # derived from Cargo.toml are enough (see make-stubs.py)
+      - name: Create dependency stubs
+        run: python3 ALICE-Voice/.github/make-stubs.py
+
+      - name: Build (default)
+        working-directory: ALICE-Voice
+        run: cargo build --lib
+
+      # `python` (pyo3 extension-module) leaves libpython unlinked, so the test
+      # binary is built without it
+      - name: Test
+        working-directory: ALICE-Voice
+        run: cargo test --lib --no-default-features --features std
+
   fmt:
     name: Format
     runs-on: ubuntu-latest
