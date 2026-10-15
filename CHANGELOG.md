@@ -12,6 +12,7 @@ All notable changes to ALICE-Voice will be documented in this file.
 
 ### Added
 - CI: x86_64 と aarch64 の build / test job と、scalar と NEON の結果を bit 単位で比べる test
+- `simd` の 4 kernel (mul_4x / dot / cosine / LPC) の出力を aarch64 NEON で記録した digest と照合する test (全 target で実行、x86_64 の scalar backend も固定する)
 
 ## [0.1.1] - 2026-03-04
 
