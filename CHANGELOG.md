@@ -10,6 +10,9 @@ All notable changes to ALICE-Voice will be documented in this file.
 
 - `simd`: aarch64 の `q16_lpc_filter_neon` が order 33 以上で長さ 32 の stack 上の係数 buffer の範囲外を読み書きしていた問題を修正 (safe な公開 API から到達する範囲外書き込み) order 32 を超える場合は共通の定義で計算し、結果は他の order と同じ規則になる
 
+### Changed
+- `db` feature: `alice-db` を sibling の path 依存 (`0.2.0-beta.1`) から crates.io の `0.5` に変更し、`alice-db/fs` を有効にする (`AliceDB::open` は alice-db 0.5 で `fs` feature 配下) `fs` が無いと `--features db` が compile できない
+
 ### Security
 - `pyo3` / `numpy` を 0.28 から 0.29 に更新 pyo3 0.28 の RUSTSEC-2026-0176 (`PyList` / `PyTuple` の iterator の `nth` / `nth_back` で範囲外を読む) と RUSTSEC-2026-0177 (`PyCFunction::new_closure` の closure に `Sync` 制約が無い) は 0.29 で修正済 この crate の `src/python.rs` はどちらの API も使っていないが、依存に脆弱な版を含めないために更新した `src/python.rs` の変更は無い
 

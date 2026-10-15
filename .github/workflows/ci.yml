@@ -46,6 +46,12 @@ jobs:
         working-directory: ALICE-Voice
         run: cargo test --lib --no-default-features --features std
 
+      # The db bridge sits behind an optional feature, so the default build never
+      # compiles it (alice-db comes from crates.io)
+      - name: Check the db bridge (optional feature)
+        working-directory: ALICE-Voice
+        run: cargo check --lib --features db
+
   fmt:
     name: Format
     runs-on: ubuntu-latest
