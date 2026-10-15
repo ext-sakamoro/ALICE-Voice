@@ -1,0 +1,59 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'src/**'
+      - '.github/make-stubs.py'
+      - '.github/workflows/security-audit.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'src/**'
+      - '.github/make-stubs.py'
+      - '.github/workflows/security-audit.yml'
+  schedule:
+    # every Monday 09:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_RETRY: "5"
+
+jobs:
+  audit:
+    name: cargo audit (RustSec)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: ALICE-Voice
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Create dependency stubs
+        run: python3 ALICE-Voice/.github/make-stubs.py
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      # Cargo.lock is not tracked; resolve it here (it covers every optional dependency)
+      - name: Generate lockfile
+        working-directory: ALICE-Voice
+        run: cargo generate-lockfile
+
+      - name: Run cargo audit
+        working-directory: ALICE-Voice
+        run: cargo audit --deny yanked
