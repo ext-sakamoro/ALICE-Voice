@@ -10,6 +10,9 @@ All notable changes to ALICE-Voice will be documented in this file.
 
 - `simd`: aarch64 の `q16_lpc_filter_neon` が order 33 以上で長さ 32 の stack 上の係数 buffer の範囲外を読み書きしていた問題を修正 (safe な公開 API から到達する範囲外書き込み) order 32 を超える場合は共通の定義で計算し、結果は他の order と同じ規則になる
 
+### Security
+- `pyo3` / `numpy` を 0.28 から 0.29 に更新 pyo3 0.28 の RUSTSEC-2026-0176 (`PyList` / `PyTuple` の iterator の `nth` / `nth_back` で範囲外を読む) と RUSTSEC-2026-0177 (`PyCFunction::new_closure` の closure に `Sync` 制約が無い) は 0.29 で修正済 この crate の `src/python.rs` はどちらの API も使っていないが、依存に脆弱な版を含めないために更新した `src/python.rs` の変更は無い
+
 ### Added
 - CI: x86_64 と aarch64 の build / test job と、scalar と NEON の結果を bit 単位で比べる test
 - `simd` の 4 kernel (mul_4x / dot / cosine / LPC) の出力を aarch64 NEON で記録した digest と照合する test (全 target で実行、x86_64 の scalar backend も固定する)

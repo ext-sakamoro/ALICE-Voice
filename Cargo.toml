@@ -36,8 +36,8 @@ thiserror = "1.0"
 rayon = "1.10"
 
 # Python bindings (optional)
-pyo3 = { version = "0.28", features = ["extension-module"], optional = true }
-numpy = { version = "0.28", optional = true }
+pyo3 = { version = "0.29", features = ["extension-module"], optional = true }
+numpy = { version = "0.29", optional = true }
 
 # ML inference (optional)
 alice-ml = { path = "../ALICE-ML", optional = true, default-features = false, features = ["std"] }
