@@ -228,6 +228,10 @@ pub fn q16_cosine_similarity_neon(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_
 // LPC Filter (Shuffle-Free)
 // ============================================
 
+/// Largest LPC order the NEON kernel handles with its stack buffer
+#[cfg(target_arch = "aarch64")]
+const NEON_LPC_MAX_ORDER: usize = 32;
+
 /// Q16.16 LPC filter optimized for linear memory access.
 ///
 /// **Critical Optimization:**
@@ -245,9 +249,16 @@ pub fn q16_lpc_filter_neon(coeffs: &[i32], gain: i32, excitation: &[i32], output
     let order = coeffs.len();
     let n = excitation.len().min(output.len());
 
+    // The reversed coefficients live in a fixed stack buffer; higher orders take the
+    // portable definition, which gives the same result without the buffer
+    if order > NEON_LPC_MAX_ORDER {
+        super::common::q16_lpc_filter(coeffs, gain, excitation, output);
+        return;
+    }
+
     unsafe {
-        // Stack buffer for reversed coefficients (Max order 32 is safe)
-        let mut rev_coeffs = [0i32; 32];
+        // Stack buffer for reversed coefficients (order <= NEON_LPC_MAX_ORDER, checked above)
+        let mut rev_coeffs = [0i32; NEON_LPC_MAX_ORDER];
         let ptr_rev = rev_coeffs.as_mut_ptr();
 
         // Pre-reverse coefficients once

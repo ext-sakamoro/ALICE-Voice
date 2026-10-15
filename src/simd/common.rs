@@ -136,8 +136,7 @@ pub fn q16_cosine_similarity(a: &[i32; EMBEDDING_DIM], b: &[i32; EMBEDDING_DIM])
     }
 }
 
-// Used by the non-aarch64 backends and by the comparison test
-#[cfg(any(test, not(target_arch = "aarch64")))]
+// Used by the non-aarch64 backends, and by the aarch64 kernel for orders above its buffer
 /// Q16.16 all-pole LPC filter: `y[i] = gain * x[i] + sum_j coeffs[j] * y[i - 1 - j]`
 ///
 /// The rounding follows the NEON kernel:

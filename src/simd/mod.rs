@@ -212,4 +212,21 @@ mod tests {
             check_lpc(&coeffs, Q16_ONE, &[], "empty");
         }
     }
+
+    /// Orders above the NEON kernel's 32-entry coefficient buffer must not write past it
+    /// and must give the canonical result
+    #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
+    #[test]
+    fn lpc_high_order_matches_canonical() {
+        use crate::types::Q16_ONE;
+
+        let mut seed = 0x0dd_u64;
+        for order in 29..=40 {
+            let mut coeffs = vec![0i32; order];
+            lcg_fill(&mut seed, &mut coeffs, Q16_ONE / 64);
+            let mut exc = vec![0i32; 96];
+            lcg_fill(&mut seed, &mut exc, Q16_ONE);
+            check_lpc(&coeffs, Q16_ONE / 2, &exc, "high order");
+        }
+    }
 }
