@@ -19,6 +19,7 @@ All notable changes to ALICE-Voice will be documented in this file.
 ### Added
 - CI: x86_64 と aarch64 の build / test job と、scalar と NEON の結果を bit 単位で比べる test
 - `simd` の 4 kernel (mul_4x / dot / cosine / LPC) の出力を aarch64 NEON で記録した digest と照合する test (全 target で実行、x86_64 の scalar backend も固定する)
+- `simd` の golden と scalar / NEON の比較に、Q16 の shift の直前の和の下位 16 bit が 0xFFFF になる入力を追加 (切り捨てを丸めに変えると結果が変わる入力、乱数入力では 2^-16 の確率でしか現れない) golden の digest を aarch64 NEON で再記録
 
 ## [0.1.1] - 2026-03-04
 

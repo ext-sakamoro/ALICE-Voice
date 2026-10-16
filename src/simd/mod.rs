@@ -340,7 +340,129 @@ mod tests {
             lpc(&mut h[3], &coeffs, Q16_ONE, &[0; 48]);
             lpc(&mut h[3], &coeffs, Q16_ONE, &[]);
         }
+
+        // Rounding edge inputs (see `rounding_edges`)
+        let edges = rounding_edges();
+        for &(a, b) in &edges.mul {
+            for v in mul_4x(&[a, a, -a, 0], &[b, -b, b, 0]) {
+                fnv1a(&mut h[0], &v.to_le_bytes());
+            }
+            fnv1a(&mut h[1], &q16_dot_product_neon(&[a], &[b]).to_le_bytes());
+            fnv1a(
+                &mut h[1],
+                &q16_dot_product_neon(&[a, 1, -1], &[b, 7, 7]).to_le_bytes(),
+            );
+        }
+        for (x, y) in &edges.cosine {
+            fnv1a(&mut h[2], &q16_cosine_similarity_neon(x, y).to_le_bytes());
+        }
+        for (coeffs, exc) in &edges.lpc {
+            lpc(&mut h[3], coeffs, Q16_ONE, exc);
+        }
         h
+    }
+
+    /// Inputs where every Q16 shift site sees a sum whose low 16 bits are 0xFFFF, so a
+    /// kernel that rounds (`(sum + 1) >> 16`) instead of flooring (`sum >> 16`) gives a
+    /// different result. Each case asserts the property of its own input. Random inputs
+    /// hit this only with probability 2^-16 per sum.
+    struct RoundingEdges {
+        mul: Vec<(i32, i32)>,
+        cosine: Vec<(
+            [i32; crate::types::EMBEDDING_DIM],
+            [i32; crate::types::EMBEDDING_DIM],
+        )>,
+        lpc: Vec<(Vec<i32>, Vec<i32>)>,
+    }
+
+    fn rounding_edges() -> RoundingEdges {
+        use crate::types::EMBEDDING_DIM;
+
+        let low16 = |v: i64| v & 0xFFFF == 0xFFFF;
+        let mul = vec![
+            (1, 0xFFFF),
+            (-1, 1),
+            (0x7FFE_FFFF, 1),
+            (0xFFFF, 0x1_0001),
+            (-0x1_0001, 1),
+        ];
+        for &(a, b) in &mul {
+            assert!(low16(i64::from(a) * i64::from(b)), "mul edge {a} {b}");
+        }
+
+        let norm = |v: &[i32; EMBEDDING_DIM]| -> i64 {
+            v.iter().map(|&x| i64::from(x) * i64::from(x)).sum()
+        };
+        // squared norm 2^16 + 0xFFFF (256^2 + 255^2 + 22^2 + 5^2 + 1)
+        let mut ca = [0i32; EMBEDDING_DIM];
+        ca[..5].copy_from_slice(&[256, 255, 22, 5, 1]);
+        assert!(
+            low16(norm(&ca)) && norm(&ca) >> 16 == 1,
+            "cosine norm edge 1"
+        );
+        // squared norm 3 * 2^16 + 0xFFFF: rounding it up to 4 moves sqrt across an
+        // integer (1.73 -> 2.0), so the denominator changes (511^2 + 31^2 + 7^2 + 3^2 + 3)
+        let mut cc = [0i32; EMBEDDING_DIM];
+        cc[..7].copy_from_slice(&[511, 31, 7, 3, 1, 1, 1]);
+        assert!(
+            low16(norm(&cc)) && norm(&cc) >> 16 == 3,
+            "cosine norm edge 3"
+        );
+        let mut neg = ca;
+        for v in neg.iter_mut() {
+            *v = -*v;
+        }
+        // (ca, ca): the dot sum and both squared norms are norm(ca)
+        let cosine = vec![(ca, ca), (cc, ca), (ca, cc), (cc, cc), (ca, neg)];
+
+        // LPC: the taps j >= order % 4 are summed in 64 bits and shifted once (the
+        // others are rounded one by one), so a single coefficient 1 at j = order % 4 makes
+        // that sum at sample order + 1 + j equal y[order] = excitation[order] (gain 1.0)
+        let mut lpc = Vec::new();
+        for order in [4, 5, 6, 7, 8, 31, 32, 33, 36, 40] {
+            let j = order % 4;
+            for edge in [0xFFFF, -1, 0x1_FFFF] {
+                assert!(low16(i64::from(edge)), "lpc edge {edge}");
+                let mut coeffs = vec![0i32; order];
+                coeffs[j] = 1;
+                let mut exc = vec![0i32; order + j + 4];
+                exc[order] = edge;
+                lpc.push((coeffs, exc));
+            }
+        }
+        RoundingEdges { mul, cosine, lpc }
+    }
+
+    /// The rounding edges through both backends (catches a rounding change in either)
+    #[cfg(any(target_arch = "aarch64", target_arch = "arm"))]
+    #[test]
+    fn scalar_matches_arm_on_rounding_edges() {
+        use crate::types::Q16_ONE;
+
+        let edges = rounding_edges();
+        for &(a, b) in &edges.mul {
+            let (x4, y4) = ([a, a, -a, 0], [b, -b, b, 0]);
+            assert_eq!(
+                scalar::q16_mul_4x_neon(&x4, &y4),
+                arm_mul_4x(&x4, &y4),
+                "mul_4x {a} {b}"
+            );
+            assert_eq!(
+                scalar::q16_dot_product_neon(&[a], &[b]),
+                arm::q16_dot_product_neon(&[a], &[b]),
+                "dot {a} {b}"
+            );
+        }
+        for (i, (x, y)) in edges.cosine.iter().enumerate() {
+            assert_eq!(
+                scalar::q16_cosine_similarity_neon(x, y),
+                arm::q16_cosine_similarity_neon(x, y),
+                "cosine edge {i}"
+            );
+        }
+        for (coeffs, exc) in &edges.lpc {
+            check_lpc(coeffs, Q16_ONE, exc, "rounding edge");
+        }
     }
 
     /// Golden digests of the canonical kernels, checked on every target (no cfg),
@@ -353,10 +475,10 @@ mod tests {
     #[test]
     fn kernels_match_golden() {
         const GOLDEN: [u64; 4] = [
-            0x3d2c_2387_2f39_2678,
-            0x87fc_e5c7_22eb_aa99,
-            0x9a43_7995_7229_c634,
-            0xfd72_8688_a3e7_b7ef,
+            0xd330_da71_8fe2_124c,
+            0x79f3_2db1_0602_9211,
+            0xbde2_0e0f_1770_05e3,
+            0xdb3f_44a0_898f_5b37,
         ];
         let got = kernel_digests();
         println!("digests = {got:#018x?}");
