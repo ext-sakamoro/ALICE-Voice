@@ -33,7 +33,7 @@ ALICE-Voice is not just an audio compression tool. It's a next-generation voice 
 Thanks to aggressive optimization:
 
 - **Ultra-low latency**: No memory allocation in hot paths = no GC stuttering. Perfect for game voice chat and real-time communication.
-- **Embedded-ready**: Q16.16 fixed-point + ARM NEON SIMD means it runs on cheap microcontrollers (Raspberry Pi Pico, STM32) via [ALICE-Edge](https://github.com/ext-sakamoro/ALICE-Edge).
+- **Embedded-ready**: Q16.16 fixed-point + ARM NEON SIMD means it runs on cheap microcontrollers (RP2040, STM32) via [ALICE-Edge](https://github.com/ext-sakamoro/ALICE-Edge).
 
 ### 3. Privacy Protection & Voice Transformation
 
