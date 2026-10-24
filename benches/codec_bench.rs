@@ -1,8 +1,6 @@
 //! ALICE-Voice Codec Benchmarks
 //!
 //! Measures performance of L1-L2 layers and SIMD operations.
-//!
-//! Note: L3 Semantic Layer benchmarks are available in the Commercial version.
 #![allow(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
@@ -225,8 +223,6 @@ fn bench_full_pipeline(c: &mut Criterion) {
             });
         });
     }
-
-    // Note: L3 Semantic Layer benchmarks are in the Commercial version
 
     group.finish();
 }

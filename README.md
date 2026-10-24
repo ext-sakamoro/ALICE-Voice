@@ -22,18 +22,17 @@ ALICE-Voice is not just an audio compression tool. It's a next-generation voice 
 
 ### 1. Dramatic Data Compression
 
-| Layer | What It Does | Compression | License |
-|-------|--------------|-------------|---------|
-| **L1 Spectral** | High-quality voice/music transmission | 10-50x | MIT |
-| **L2 Parametric** | Extract only vocal parameters (pitch, formants) | 100-600x | MIT |
-| **L3 Semantic** | Convert to text + emotion + speaker ID | 1000x+ | [Commercial](https://github.com/ext-sakamoro/ALICE-Voice-Commercial) |
+| Layer | What It Does | Compression |
+|-------|--------------|-------------|
+| **L1 Spectral** | High-quality voice/music transmission | 10-50x |
+| **L2 Parametric** | Extract only vocal parameters (pitch, formants) | 100-600x |
 
 ### 2. Runs Anywhere (Zero-Allocation Design)
 
 Thanks to aggressive optimization:
 
 - **Ultra-low latency**: No memory allocation in hot paths = no GC stuttering. Perfect for game voice chat and real-time communication.
-- **Embedded-ready**: Q16.16 fixed-point + ARM NEON SIMD means it runs on cheap microcontrollers (Raspberry Pi Pico, STM32) via [ALICE-Edge](https://github.com/ext-sakamoro/ALICE-Edge).
+- **Embedded-ready**: Q16.16 fixed-point + ARM NEON SIMD means it runs on cheap microcontrollers (RP2040, STM32) via [ALICE-Edge](https://github.com/ext-sakamoro/ALICE-Edge).
 
 ### 3. Privacy Protection & Voice Transformation
 
@@ -54,12 +53,10 @@ With ALICE-Voice, you can have clear, uninterrupted voice calls on:
 
 ## Layer Architecture
 
-| Layer | Name | Content | Typical Size | Compression | License |
-|-------|------|---------|--------------|-------------|---------|
-| L2 | Parametric | LPC coefficients + Formants + Pitch | 50-200 bytes/frame | 100-600x | MIT |
-| L1 | Spectral | DCT coefficients | 200-1000 bytes/frame | 10-50x | MIT |
-
-> **Note:** L3 Semantic Layer (1000x+ compression) is available under [Commercial License](https://github.com/ext-sakamoro/ALICE-Voice-Commercial).
+| Layer | Name | Content | Typical Size | Compression |
+|-------|------|---------|--------------|-------------|
+| L2 | Parametric | LPC coefficients + Formants + Pitch | 50-200 bytes/frame | 100-600x |
+| L1 | Spectral | DCT coefficients | 200-1000 bytes/frame | 10-50x |
 
 ## Quick Start
 
@@ -361,7 +358,6 @@ Enable: `alice-voice = { features = ["text"] }`
 
 | Project | Description |
 |---------|-------------|
-| [ALICE-Voice-Commercial](https://github.com/ext-sakamoro/ALICE-Voice-Commercial) | L3 Semantic Layer (Commercial License) |
 | [ALICE-Edge](https://github.com/ext-sakamoro/ALICE-Edge) | Embedded model generator (LPC Q16.16) |
 | [ALICE-Streaming-Protocol](https://github.com/ext-sakamoro/ALICE-Streaming-Protocol) | Video streaming (Spectral layer compatible) |
 | [ALICE-Zip](https://github.com/ext-sakamoro/ALICE-Zip) | Procedural generation engine |
@@ -373,8 +369,6 @@ All projects share the core philosophy: **encode the generation process, not the
 `LicenseRef-Proprietary`. The text is [LICENSE-Proprietary](LICENSE-Proprietary).
 
 Enquiries: https://extoria.co.jp/
-
-**Note:** L3 Semantic Layer is available under Commercial License at [ALICE-Voice-Commercial](https://github.com/ext-sakamoro/ALICE-Voice-Commercial).
 
 ## Author
 

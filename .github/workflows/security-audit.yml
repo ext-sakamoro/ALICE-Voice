@@ -8,13 +8,6 @@ on:
       - 'src/**'
       - '.github/make-stubs.py'
       - '.github/workflows/security-audit.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'Cargo.toml'
-      - 'src/**'
-      - '.github/make-stubs.py'
-      - '.github/workflows/security-audit.yml'
   schedule:
     # every Monday 09:00 UTC
     - cron: '0 9 * * 1'

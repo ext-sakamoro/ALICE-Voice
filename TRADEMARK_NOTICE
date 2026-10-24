@@ -1,15 +1,13 @@
 TRADEMARK NOTICE
 
 "ALICE", "Project A.L.I.C.E.", and the "ALICE-*" naming pattern are
-trademarks of Moroya Sakamoto. Nothing in the licence under which this software is distributed (see
-LICENSE-Proprietary and the `license` field in Cargo.toml) grants permission to use
+trademarks of Moroya Sakamoto. Nothing in the licence under which this
+software is distributed (see LICENSE-Proprietary) grants permission to use
 these trademarks, except as required for reasonable and customary use in
-describing the origin of the software. This holds whatever that licence is,
-so this notice does not need updating when the licence changes.
+describing the origin of the software.
 
 If you fork this project, you must remove or replace the "ALICE" prefix
 in your fork's name and clearly indicate that your fork is not an
 official ALICE product.
 
-See BRAND_GUIDELINES.md in ALICE-Eco-System for full trademark policy.
-Official reference: https://alicelaw.net
+Enquiries: https://extoria.co.jp/

@@ -8,8 +8,6 @@
 //! |----------|-------------|-------|
 //! | `voice_to_params` | Voice → Parametric | L2 |
 //! | `params_to_voice` | Parametric → Voice | L2 |
-//!
-//! Note: L3 Semantic Layer is available under Commercial License.
 
 use crate::layers::{ParametricLayer, ParametricParams, SpectralLayer, SpectralParams};
 use crate::types::{VoiceQuality, VoiceResult};
@@ -90,9 +88,6 @@ impl VoiceCodecConfig {
 }
 
 /// Unified voice codec supporting L1-L2 layers
-///
-/// Note: L3 Semantic Layer is available under Commercial License.
-/// See: <https://github.com/ext-sakamoro/ALICE-Voice-Commercial>
 #[derive(Debug)]
 pub struct VoiceCodec {
     /// Configuration
@@ -316,8 +311,6 @@ mod tests {
         // All layers should achieve some compression
         assert!(ratio1 > 1.0, "L1 should compress");
         assert!(ratio2 > 1.0, "L2 should compress");
-
-        // Note: L3 Semantic Layer is available under Commercial License
     }
 
     #[test]

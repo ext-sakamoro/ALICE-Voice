@@ -13,9 +13,6 @@
 //! | L2 | Parametric | LPC + Formants + Pitch | 100-600x |
 //! | L1 | Spectral | FFT/DCT coefficients | 10-50x |
 //!
-//! Note: L3 Semantic Layer (1000x+ compression) is available under Commercial License.
-//! See: <https://github.com/ext-sakamoro/ALICE-Voice-Commercial>
-//!
 //! # Example
 //!
 //! ```ignore
