@@ -1,0 +1,3 @@
+# Features scripts/feature_check.py --ci does not build in CI: `<feature> <reason>`
+# The local preflight builds them with the real sibling checkouts.
+text alice-text is still a path dependency, and CI replaces it with an empty stub; it moves to a git revision once ALICE-Text itself has no path dependency

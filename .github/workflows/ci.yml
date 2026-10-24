@@ -29,8 +29,8 @@ jobs:
         with:
           workspaces: ALICE-Voice
 
-      # The path siblings are all optional and outside `default`, so empty stubs
-      # derived from Cargo.toml are enough (see make-stubs.py)
+      # The remaining path sibling (alice-text) is optional and outside `default`, so an empty stub
+      # derived from Cargo.toml is enough for the default build (see make-stubs.py)
       - name: Create dependency stubs
         run: python3 ALICE-Voice/.github/make-stubs.py
 
@@ -44,11 +44,16 @@ jobs:
         working-directory: ALICE-Voice
         run: cargo test --lib --no-default-features --features std
 
-      # The db bridge sits behind an optional feature, so the default build never
-      # compiles it (alice-db comes from crates.io)
-      - name: Check the db bridge (optional feature)
+      # Every optional feature on its own (read from Cargo.toml), so a bridge no other step builds cannot
+      # break unseen; the features whose dependency CI still stubs are listed, with the reason, in
+      # .github/feature-check-pending.txt
+      - name: Test the feature check
         working-directory: ALICE-Voice
-        run: cargo check --lib --features db
+        run: python3 scripts/feature_check.py --self-test
+
+      - name: Check each optional feature
+        working-directory: ALICE-Voice
+        run: python3 scripts/feature_check.py --ci
 
   fmt:
     name: Format

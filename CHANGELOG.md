@@ -4,7 +4,17 @@ All notable changes to ALICE-Voice will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `text` feature: `SpeechHints` / `VoiceMode` / `analyze_for_speech` / `compress_transcript` / `codec_config_from_hints` (ALICE-Text の `voice` feature から移した) transcript を ALICE-Text で圧縮した統計から codec の層 (例外率 0.3 未満で `Parametric`) と品質 (圧縮率 0.3 未満 `High` / 0.6 未満 `Medium` / それ以外 `Low`) を勧める 2 つの関数は同じ判定を共有する 試験: 境界の両側、音素数の切り上げ、2 つの関数の一致と圧縮した transcript の復元、品質ごとの codec の設定
+- CI: `scripts/feature_check.py` が optional feature を 1 つずつ `cargo clippy --lib --features <名前> -- -D warnings` で build する (Cargo.toml の `[features]` から読む、その feature の code だけが出す警告 (捨てた `Result` など) も失敗にする、build した数が 0 なら失敗、self-test 11 通り) CI でまだ空の stub に対して build する feature は理由付きで `.github/feature-check-pending.txt` に書き、`PENDING` と出す 手元の preflight は実物の sibling で全 feature を build する (`scripts/preflight.local.sh`)
+
+### Changed
+- 依存: `alice-ml` を ALICE-ML の commit `d2ce77f` (0.4.0)、`alice-codec` を ALICE-Codec の commit `c96278e` (0.1.3) の git で取る (sibling の path でなくなり、CI でも実物を build する)
+- CI: `--features db` だけを build していた step は feature ごとの build に含めた
+
 ### Fixed
+- `codec` feature: `codec_bridge` が alice-codec の `quantize_buffer` / `to_symbols` / `from_symbols` / `dequantize_buffer` の `Result` を捨てていた (どれもバッファの長さが等しいので起きないが、捨てずに理由を書いた `expect` にした)
+- `text` feature: `compress_voice_transcript` / `decompress_voice_transcript` が `ALICEText::new()` を mode なしで呼んでいて `--features text` が compile できなかった (`EncodingMode::Pattern` を渡し、圧縮は `mut` の encoder で行う)
 - `simd`: x86_64 など ARM 以外の target で `simd::scalar` が存在しない `arm` module を参照して compile できなかった問題を修正 (共通の整数演算 4 関数を `simd::common` へ移し両 backend から再 export)
 - `simd`: scalar backend (ARM 以外) と 32-bit ARM の fallback の出力を aarch64 NEON と bit 一致させた 出力が変わるのは scalar の `q16_cosine_similarity_neon` (結果が 2^16 倍になっていた scale の誤りと整数平方根による差) と、scalar / 32-bit ARM の `q16_lpc_filter_neon` (order 4 以上で tap ごとに丸めていたため 1-2 LSB ずれていた) aarch64 の出力は変わらない (NEON の 64-bit 和の最後の加算を wrapping にしたが release build の値は同じで、debug build で overflow 時に panic しなくなる)
 

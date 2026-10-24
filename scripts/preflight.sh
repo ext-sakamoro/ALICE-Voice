@@ -6,7 +6,8 @@
 # Run `--quick` before every push.
 #
 # usage: scripts/preflight.sh [--quick]   (--quick skips the test / bench suites)
-# generator rev 14ebd13527e9101cc767d6df5bc879451611b5f5
+# generator rev 53b5498bfca8e6d099032eaee5ccb99ec580b7b3
+# local steps: scripts/preflight.local.sh 5f853cb63575b4a1aba5b7cf3b54f57df1fb9958
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # --- heavy slot (begin) ---
@@ -260,8 +261,11 @@ need cargo-audit "cargo install cargo-audit --locked"
 step "ci.yml / test: Build (default)"
 ( export CARGO_TERM_COLOR="always"; cargo build --lib )
 
-step "ci.yml / test: Check the db bridge (optional feature)"
-( export CARGO_TERM_COLOR="always"; cargo check --lib --features db )
+step "ci.yml / test: Test the feature check"
+( export CARGO_TERM_COLOR="always"; python3 scripts/feature_check.py --self-test )
+
+step "ci.yml / test: Check each optional feature"
+( export CARGO_TERM_COLOR="always"; python3 scripts/feature_check.py --ci )
 
 step "ci.yml / fmt: Check formatting"
 ( export CARGO_TERM_COLOR="always"; cargo fmt -- --check )
@@ -277,6 +281,8 @@ actionlint .github/workflows/*.yml
 
 step "security-audit.yml / audit: Generate lockfile"
 ( export CARGO_TERM_COLOR="always" CARGO_NET_RETRY="5"; cargo generate-lockfile )
+
+python3 scripts/feature_check.py
 
 if [[ $quick -eq 1 ]]; then
   echo; echo "preflight --quick OK (test / bench suites skipped)"; exit 0

@@ -80,11 +80,13 @@ pub fn compress_lpc_sequence(
     // Quantize wavelet coefficients
     let quantizer = Quantizer::new(quantizer_step.max(1));
     let mut quantized = vec![0i32; padded_len];
-    quantizer.quantize_buffer(&signal, &mut quantized);
+    quantizer
+        .quantize_buffer(&signal, &mut quantized)
+        .expect("the quantized buffer has the signal's length");
 
     // Convert to symbols for rANS
     let mut symbols = vec![0u8; padded_len];
-    to_symbols(&quantized, &mut symbols);
+    to_symbols(&quantized, &mut symbols).expect("the symbol buffer has the quantized length");
 
     // Build frequency table and encode
     let histogram = build_histogram(&symbols);
@@ -143,12 +145,14 @@ pub fn decompress_lpc_sequence(compressed: &CodecCompressedFrame) -> Vec<Vec<f32
 
     // Symbols → quantized coefficients
     let mut quantized = vec![0i32; padded_len];
-    from_symbols(&symbols, &mut quantized);
+    from_symbols(&symbols, &mut quantized).expect("the coefficient buffer has the symbol count");
 
     // Dequantize
     let quantizer = Quantizer::new(compressed.quantizer_step.max(1));
     let mut signal = vec![0i32; padded_len];
-    quantizer.dequantize_buffer(&quantized, &mut signal);
+    quantizer
+        .dequantize_buffer(&quantized, &mut signal)
+        .expect("the signal buffer has the quantized length");
 
     // Inverse wavelet
     let wavelet = Wavelet1D::cdf53();
