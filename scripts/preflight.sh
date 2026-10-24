@@ -7,7 +7,6 @@
 #
 # usage: scripts/preflight.sh [--quick]   (--quick skips the test / bench suites)
 # generator rev 53b5498bfca8e6d099032eaee5ccb99ec580b7b3
-# local steps: scripts/preflight.local.sh 5f853cb63575b4a1aba5b7cf3b54f57df1fb9958
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # --- heavy slot (begin) ---
@@ -251,8 +250,6 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "missing tool: $1 ($2)" >&2; 
 has_toolchain() { grep -q "^$1" <<<"$(rustup toolchain list)"; }
 
 # Steps CI runs that this file cannot reproduce locally (they can only fail remotely):
-#   - ci.yml:test:Create dependency stubs (sibling stubs for the runner; locally the sibling checkouts are built)
-#   - security-audit.yml:audit:Create dependency stubs (sibling stubs for the runner; locally the sibling checkouts are built)
 #   - security-audit.yml:audit:Install cargo-audit (needs network / runner-only)
 
 need actionlint "brew install actionlint"
@@ -281,8 +278,6 @@ actionlint .github/workflows/*.yml
 
 step "security-audit.yml / audit: Generate lockfile"
 ( export CARGO_TERM_COLOR="always" CARGO_NET_RETRY="5"; cargo generate-lockfile )
-
-python3 scripts/feature_check.py
 
 if [[ $quick -eq 1 ]]; then
   echo; echo "preflight --quick OK (test / bench suites skipped)"; exit 0

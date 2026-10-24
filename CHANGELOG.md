@@ -9,6 +9,7 @@ All notable changes to ALICE-Voice will be documented in this file.
 - CI: `scripts/feature_check.py` が optional feature を 1 つずつ `cargo clippy --lib --features <名前> -- -D warnings` で build する (Cargo.toml の `[features]` から読む、その feature の code だけが出す警告 (捨てた `Result` など) も失敗にする、build した数が 0 なら失敗、self-test 11 通り) CI でまだ空の stub に対して build する feature は理由付きで `.github/feature-check-pending.txt` に書き、`PENDING` と出す 手元の preflight は実物の sibling で全 feature を build する (`scripts/preflight.local.sh`)
 
 ### Changed
+- 依存: `alice-text` (feature `text`) を ALICE-Text の commit `ab5d154` (2.0.0) の git で取る path の sibling が無くなったので、CI で空の stub を作る `.github/make-stubs.py` と その step、`text` を保留にしていた `.github/feature-check-pending.txt`、手元だけで全 feature を build していた `scripts/preflight.local.sh` を削除した CI の feature ごとの build は `text` も実物で build する
 - 依存: `alice-ml` を ALICE-ML の commit `d2ce77f` (0.4.0)、`alice-codec` を ALICE-Codec の commit `c96278e` (0.1.3) の git で取る (sibling の path でなくなり、CI でも実物を build する)
 - CI: `--features db` だけを build していた step は feature ごとの build に含めた
 

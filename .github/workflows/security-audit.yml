@@ -6,7 +6,6 @@ on:
     paths:
       - 'Cargo.toml'
       - 'src/**'
-      - '.github/make-stubs.py'
       - '.github/workflows/security-audit.yml'
   schedule:
     # every Monday 09:00 UTC
@@ -35,9 +34,6 @@ jobs:
           path: ALICE-Voice
 
       - uses: dtolnay/rust-toolchain@stable
-
-      - name: Create dependency stubs
-        run: python3 ALICE-Voice/.github/make-stubs.py
 
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
