@@ -370,7 +370,9 @@ All projects share the core philosophy: **encode the generation process, not the
 
 ## License
 
-MIT License
+`LicenseRef-Proprietary`. The text is [LICENSE-Proprietary](LICENSE-Proprietary).
+
+Enquiries: https://extoria.co.jp/
 
 **Note:** L3 Semantic Layer is available under Commercial License at [ALICE-Voice-Commercial](https://github.com/ext-sakamoro/ALICE-Voice-Commercial).
 
