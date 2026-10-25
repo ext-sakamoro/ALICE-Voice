@@ -3,10 +3,6 @@ name: Security
 on:
   push:
     branches: [main, 'ci/**']
-    paths:
-      - 'Cargo.toml'
-      - 'src/**'
-      - '.github/workflows/security-audit.yml'
   schedule:
     # every Monday 09:00 UTC
     - cron: '0 9 * * 1'
@@ -25,7 +21,38 @@ env:
   CARGO_NET_RETRY: "5"
 
 jobs:
+  # which files changed: a new or force-pushed branch is compared with merge-base(origin/main),
+  # another push with before..after, a pull request with base...head; schedule and manual
+  # runs always run; any error runs (fail-closed) — scripts/changed_paths.py
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: decide
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after || github.sha }}
+          CREATED: ${{ github.event.created }}
+          FORCED: ${{ github.event.forced }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          python3 scripts/changed_paths.py decide --event "$EVENT"
+          --before "$BEFORE" --after "$AFTER" --created "$CREATED" --forced "$FORCED"
+          --base "$PR_BASE" --head "$PR_HEAD"
+          --patterns-file .github/paths/security-audit.txt
+
   audit:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     name: cargo audit (RustSec)
     runs-on: ubuntu-latest
     steps:
@@ -54,3 +81,16 @@ jobs:
         run: |
           cargo audit --deny yanked \
             --ignore RUSTSEC-2026-0235
+
+  gate:
+    name: Gate
+    if: always()
+    needs: [changes, audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: gate
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/changed_paths.py gate --needs-json "$NEEDS"
