@@ -241,7 +241,7 @@ const NEON_LPC_MAX_ORDER: usize = 32;
 /// `coeffs`: [a1, a2, a3, a4]
 /// `rev_coeffs`: [a4, a3, a2, a1]
 ///
-/// Output memory `y` is contiguous: [..., y[n-4], y[n-3], y[n-2], y[n-1]]
+/// The output `y` is contiguous in memory: [..., y[n-4], y[n-3], y[n-2], y[n-1]]
 ///
 /// Now `rev_coeffs` and the tail of `y` are aligned for a direct SIMD dot product!
 #[cfg(target_arch = "aarch64")]
