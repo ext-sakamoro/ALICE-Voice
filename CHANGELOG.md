@@ -12,6 +12,7 @@ All notable changes to ALICE-Voice will be documented in this file.
 - 依存: `alice-text` (feature `text`) を ALICE-Text の commit `ab5d154` (2.0.0) の git で取る path の sibling が無くなったので、CI で空の stub を作る `.github/make-stubs.py` と その step、`text` を保留にしていた `.github/feature-check-pending.txt`、手元だけで全 feature を build していた `scripts/preflight.local.sh` を削除した CI の feature ごとの build は `text` も実物で build する
 - 依存: `alice-ml` を ALICE-ML の commit `d2ce77f` (0.4.0)、`alice-codec` を ALICE-Codec の commit `c96278e` (0.1.3) の git で取る (sibling の path でなくなり、CI でも実物を build する)
 - CI: `--features db` だけを build していた step は feature ごとの build に含めた
+- CI: 公開する文面の検査 (`Public text` workflow、`scripts/public_text.sh`) を追加 ALICE-Law の `scripts/public_text_check.py` を `.github/public-text-pin` の revision で取得し、SHA-256 が一致した時だけ使って、HEAD の全 tracked file (path と本文) と送った commit (message・追加行・追加 path) を読む 何も比較できなければ失敗する preflight でも走る
 
 ### Fixed
 - `codec` feature: `codec_bridge` が alice-codec の `quantize_buffer` / `to_symbols` / `from_symbols` / `dequantize_buffer` の `Result` を捨てていた (どれもバッファの長さが等しいので起きないが、捨てずに理由を書いた `expect` にした)
