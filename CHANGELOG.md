@@ -10,6 +10,7 @@ All notable changes to ALICE-Voice will be documented in this file.
 
 ### Fixed
 
+- `benches/codec_bench.rs` が ARM でしか無い `alice_voice::simd::arm` を引いており、x86_64 で bench が compile できなかった 全 target にある `alice_voice::simd` から引く
 - `db` feature の試験: store を開けない時に何も確かめずに通っていた 開けなければ失敗し、書いた pitch / gain / voicing を範囲で読み戻して比べる 保存先は固定の `/tmp` でなく一時 dir
 
 ### Added

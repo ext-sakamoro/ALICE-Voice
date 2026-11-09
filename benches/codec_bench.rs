@@ -8,9 +8,7 @@
 )]
 
 use alice_voice::layers::{ParametricLayer, SpectralLayer};
-use alice_voice::simd::arm::{
-    q16_cosine_similarity_neon, q16_dot_product_neon, q16_lpc_filter_neon,
-};
+use alice_voice::simd::{q16_cosine_similarity_neon, q16_dot_product_neon, q16_lpc_filter_neon};
 use alice_voice::types::EMBEDDING_DIM;
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
