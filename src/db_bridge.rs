@@ -91,15 +91,18 @@ impl VoiceMetricsSink {
 mod tests {
     use super::*;
 
+    // oracle: the values written at a timestamp are the values read back from a range that holds it,
+    // and a range that does not hold it reads nothing
     #[test]
     fn test_voice_metrics_open() {
-        let dir = "/tmp/alice_voice_db_test";
-        let result = VoiceMetricsSink::open(dir);
-        if result.is_ok() {
-            let sink = result.unwrap();
-            sink.record(1000, 440.0, 0.8, 0.95);
-            let pitches = sink.query_pitch(0, 2000);
-            assert!(!pitches.is_empty());
-        }
+        let dir = std::env::temp_dir().join(format!("alice_voice_db_test_{}", std::process::id()));
+        let sink = VoiceMetricsSink::open(dir.to_str().unwrap()).expect("open the metrics store");
+        sink.record(1000, 440.0, 0.8, 0.95);
+        assert_eq!(sink.query_pitch(0, 2000), vec![(1000, 440.0)]);
+        assert_eq!(sink.query_gain(0, 2000), vec![(1000, 0.8)]);
+        assert_eq!(sink.query_voicing(0, 2000), vec![(1000, 0.95)]);
+        assert!(sink.query_pitch(2001, 3000).is_empty());
+        drop(sink);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

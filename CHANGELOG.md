@@ -4,6 +4,14 @@ All notable changes to ALICE-Voice will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- CI: `scripts/feature_check.py` が optional feature ごとの clippy に加えて `cargo test --lib --features <名前>` を走らせ、最後に全 feature を同時に有効にした clippy (`--all-targets`) と test を走らせる 一緒に有効にできない feature は `.github/feature-check-apart.txt` に理由付きで書く (self-test 16 通り)
+
+### Fixed
+
+- `db` feature の試験: store を開けない時に何も確かめずに通っていた 開けなければ失敗し、書いた pitch / gain / voicing を範囲で読み戻して比べる 保存先は固定の `/tmp` でなく一時 dir
+
 ### Added
 - `text` feature: `SpeechHints` / `VoiceMode` / `analyze_for_speech` / `compress_transcript` / `codec_config_from_hints` (ALICE-Text の `voice` feature から移した) transcript を ALICE-Text で圧縮した統計から codec の層 (例外率 0.3 未満で `Parametric`) と品質 (圧縮率 0.3 未満 `High` / 0.6 未満 `Medium` / それ以外 `Low`) を勧める 2 つの関数は同じ判定を共有する 試験: 境界の両側、音素数の切り上げ、2 つの関数の一致と圧縮した transcript の復元、品質ごとの codec の設定
 - CI: `scripts/feature_check.py` が optional feature を 1 つずつ `cargo clippy --lib --features <名前> -- -D warnings` で build する (Cargo.toml の `[features]` から読む、その feature の code だけが出す警告 (捨てた `Result` など) も失敗にする、build した数が 0 なら失敗、self-test 11 通り) CI でまだ空の stub に対して build する feature は理由付きで `.github/feature-check-pending.txt` に書き、`PENDING` と出す 手元の preflight は実物の sibling で全 feature を build する (`scripts/preflight.local.sh`)
