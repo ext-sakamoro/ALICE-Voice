@@ -650,13 +650,13 @@ fi
 step "ci.yml / test: Test"
 (
   gh_step ci.yml.test
-( export CARGO_TERM_COLOR="always"; cargo test --lib --no-default-features --features std )
+( export CARGO_TERM_COLOR="always"; cargo test --locked --lib --no-default-features --features std )
 )
 
 step "ci.yml / test: Test the bridges"
 (
   gh_step ci.yml.test
-( export CARGO_TERM_COLOR="always"; cargo test --lib --no-default-features --features std,ml,codec,db,text )
+( export CARGO_TERM_COLOR="always"; cargo test --locked --lib --no-default-features --features std,ml,codec,db,text )
 )
 
 step "security-audit.yml / audit: Run cargo audit"

@@ -37,12 +37,12 @@ jobs:
       # binary is built without it
       - name: Test
         working-directory: ALICE-Voice
-        run: cargo test --lib --no-default-features --features std
+        run: cargo test --locked --lib --no-default-features --features std
 
       # the bridges' own tests (their alice-* come by git, branch main)
       - name: Test the bridges
         working-directory: ALICE-Voice
-        run: cargo test --lib --no-default-features --features std,ml,codec,db,text
+        run: cargo test --locked --lib --no-default-features --features std,ml,codec,db,text
 
       - name: Lock (every alice-* from git, none by path or from a registry, at most one alice-det-math)
         working-directory: ALICE-Voice
