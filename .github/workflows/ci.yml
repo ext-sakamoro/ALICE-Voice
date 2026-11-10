@@ -39,6 +39,25 @@ jobs:
         working-directory: ALICE-Voice
         run: cargo test --lib --no-default-features --features std
 
+      # the bridges' own tests (their alice-* come by git, branch main)
+      - name: Test the bridges
+        working-directory: ALICE-Voice
+        run: cargo test --lib --no-default-features --features std,ml,codec,db,text
+
+      - name: Lock (every alice-* from git, none by path or from a registry, at most one alice-det-math)
+        working-directory: ALICE-Voice
+        run: |
+          python3 - <<'PY'
+          import sys, tomllib
+          pk = [p for p in tomllib.load(open("Cargo.lock", "rb"))["package"] if p["name"].startswith("alice")]
+          bad = [f'{p["name"]} {p["version"]} {p.get("source", "path")}' for p in pk
+                 if p["name"] != "alice-voice" and not p.get("source", "").startswith("git+")]
+          dm = [p for p in pk if p["name"] == "alice-det-math"]
+          print(f"lock: {len(pk) - 1} alice-* dependencies, {len(bad)} not from git, {len(dm)} alice-det-math")
+          if len(pk) < 2 or bad or len(dm) > 1:
+              sys.exit("\n".join(bad) or "expected an alice-* dependency and at most one alice-det-math")
+          PY
+
       # Every optional feature on its own (read from Cargo.toml), so a bridge no other step builds cannot
       # break unseen
       - name: Test the feature check
