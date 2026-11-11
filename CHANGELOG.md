@@ -5,6 +5,7 @@ All notable changes to ALICE-Voice will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- Cargo.lock: alice-db を main に取り直し、alice-db が前に rev で引いていた alice-serial も ALICE-Serial の main branch から (同じ commit 16b34eb) になった
 - Cargo.lock を追跡する (git の branch で引く alice-* の commit を lock が決める) CI の試験は `--locked`
 - 依存: `alice-ml` / `alice-codec` / `alice-text` を git の固定 rev から git の main (version 0.4 / 0.2 / 2) に、`alice-db` を crates.io の 0.5 から git の main (0.6) に替えた CI: bridge の試験 (`--features std,ml,codec,db,text`) と、Cargo.lock の alice-* が全部 git から来ること (path / registry 0 件、alice-det-math は高々 1 つ) の検査を足した
 - CI: `scripts/feature_check.py` が optional feature ごとの clippy に加えて `cargo test --lib --features <名前>` を走らせ、最後に全 feature を同時に有効にした clippy (`--all-targets`) と test を走らせる 一緒に有効にできない feature は `.github/feature-check-apart.txt` に理由付きで書く (self-test 16 通り)
