@@ -48,7 +48,7 @@ alice-ml = { git = "https://github.com/ext-sakamoro/ALICE-ML", branch = "main", 
 alice-codec = { git = "https://github.com/ext-sakamoro/ALICE-Codec", branch = "main", version = "0.2", optional = true, default-features = false, features = ["std"] }
 
 # DB bridge (optional)
-alice-db = { git = "https://github.com/ext-sakamoro/ALICE-DB", branch = "main", version = "0.6", optional = true, default-features = false }
+alice-db = { git = "https://github.com/ext-sakamoro/ALICE-DB", branch = "main", version = "0.7", optional = true, default-features = false }
 
 # Text bridge (optional)
 alice-text = { git = "https://github.com/ext-sakamoro/ALICE-Text", branch = "main", version = "2", optional = true, default-features = false }

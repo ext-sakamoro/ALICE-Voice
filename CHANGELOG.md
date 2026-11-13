@@ -5,6 +5,7 @@ All notable changes to ALICE-Voice will be documented in this file.
 ## [Unreleased]
 
 ### Changed
+- 依存: feature `db` の alice-db を 0.7 に (展開は上限付き、blob の圧縮値に長さを記録、config は non_exhaustive)、lock の alice-text を fd1cfc4 に (v1 の LZMA は宣言長と decoder の上限まで) この crate は config を struct literal で作らないので code の変更なし lock: alice-db f045d85、alice-zip 6c5fc8b、alice-det-math 6269efc、alice-serial 38f306c
 - Cargo.lock: alice-db を main に取り直し、alice-db が前に rev で引いていた alice-serial も ALICE-Serial の main branch から (同じ commit 16b34eb) になった
 - Cargo.lock を追跡する (git の branch で引く alice-* の commit を lock が決める) CI の試験は `--locked`
 - 依存: `alice-ml` / `alice-codec` / `alice-text` を git の固定 rev から git の main (version 0.4 / 0.2 / 2) に、`alice-db` を crates.io の 0.5 から git の main (0.6) に替えた CI: bridge の試験 (`--features std,ml,codec,db,text`) と、Cargo.lock の alice-* が全部 git から来ること (path / registry 0 件、alice-det-math は高々 1 つ) の検査を足した

@@ -28,8 +28,8 @@ dependencies = [
 
 [[package]]
 name = "alice-db"
-version = "0.6.0"
-source = "git+https://github.com/ext-sakamoro/ALICE-DB?branch=main#06cc2af6d2ed1c3722a906ec8169cdecb41beef0"
+version = "0.7.0"
+source = "git+https://github.com/ext-sakamoro/ALICE-DB?branch=main#f045d85efd912091922a4ba80ed41b61767d8bcf"
 dependencies = [
  "alice-det-math",
  "alice-serial",
@@ -51,7 +51,7 @@ dependencies = [
 [[package]]
 name = "alice-det-math"
 version = "0.6.1"
-source = "git+https://github.com/ext-sakamoro/ALICE-DetMath?branch=main#d80446ebce73c5c397f7df12435cf574460400bf"
+source = "git+https://github.com/ext-sakamoro/ALICE-DetMath?branch=main#6269efc2280a74301c91139117d5d01a5eca60df"
 
 [[package]]
 name = "alice-ml"
@@ -65,12 +65,12 @@ dependencies = [
 [[package]]
 name = "alice-serial"
 version = "0.2.0"
-source = "git+https://github.com/ext-sakamoro/ALICE-Serial?branch=main#16b34ebcaf3a195fe6500defb4d1e6002cb3d09d"
+source = "git+https://github.com/ext-sakamoro/ALICE-Serial?branch=main#38f306c2a4fc49d2b89f61494a16f1d0b07dc609"
 
 [[package]]
 name = "alice-text"
 version = "2.0.0"
-source = "git+https://github.com/ext-sakamoro/ALICE-Text?branch=main#83812f3e5ea6b19c504121f770a8e73481e73f10"
+source = "git+https://github.com/ext-sakamoro/ALICE-Text?branch=main#fd1cfc44d33f315030803475ec5b40cba57232af"
 dependencies = [
  "alice-zip",
  "bincode",
@@ -107,12 +107,14 @@ dependencies = [
 
 [[package]]
 name = "alice-zip"
-version = "0.11.0"
-source = "git+https://github.com/ext-sakamoro/ALICE-Zip?branch=main#f1aa51dada9048753bfea387ce4c6f07863d6070"
+version = "0.12.0"
+source = "git+https://github.com/ext-sakamoro/ALICE-Zip?branch=main#6c5fc8b08f9c5f7232e072f12fea88b9999df310"
 dependencies = [
  "alice-det-math",
+ "crc",
  "flate2",
  "libm",
+ "lzma-rs",
  "rand",
  "rand_chacha",
  "sha2",
